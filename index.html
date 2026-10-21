@@ -409,6 +409,9 @@ h4{font:700 17px var(--display);margin:0 0 6px}
 .hero .evchip{cursor:pointer;font:600 12px var(--body)}
 
 
+summary{cursor:pointer;-webkit-user-select:none;user-select:none}
+summary::-webkit-details-marker{display:none}
+
 /* Toque cómodo en pantallas táctiles */
 button,select,input,summary{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 @media (pointer:coarse){
@@ -3087,6 +3090,15 @@ $('testBlocks').addEventListener('click',e=>{
   if((k=g('data-tmrclose'))){document.querySelector(`[data-tmr="${k}"]`).hidden=true;document.querySelector(`[data-tmropen="${k}"]`).hidden=false;return}
 });
 buildTestBlocks();levelTable();renderRun();draw();renderThr();calcPreview();
+
+/* Abrir y cerrar las secciones plegables con un toque, también en Safari del iPad */
+document.addEventListener('click',e=>{
+  const sum=e.target.closest('summary');if(!sum)return;
+  const d=sum.parentElement;if(!d||d.tagName!=='DETAILS')return;
+  const ctl=e.target.closest('a,button,input,select,textarea');if(ctl&&sum.contains(ctl))return;
+  e.preventDefault();d.open=!d.open;
+},true);
+
 
 fillEvalAthletes();loadEvalForm(true);
 initStore();
