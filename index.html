@@ -412,8 +412,9 @@ h4{font:700 17px var(--display);margin:0 0 6px}
 summary{cursor:pointer;-webkit-user-select:none;user-select:none}
 summary::-webkit-details-marker{display:none}
 
-.qpdf{display:flex;gap:8px;flex-wrap:wrap;width:100%;order:-1}
-.qpdf .btn{min-height:44px}
+.qpdf{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 12px;margin-bottom:-6px;border:1px solid var(--line);border-bottom:0;border-radius:14px 14px 0 0;background:var(--sky-soft)}
+.qpdf .qn{font:700 15px var(--display);color:var(--court);flex:1 1 140px}
+.qpdf .btn{min-height:48px;touch-action:manipulation}
 
 /* Toque cómodo en pantallas táctiles */
 button,select,input,summary{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
@@ -2180,11 +2181,11 @@ function renderAthletes(){
     const edad=lc?lc.edad:ageAt(a.nac,todayISO());
     const meta=[a.sexo==='F'?'Femenina':a.sexo==='M'?'Masculina':'Rama sin definir',a.posicion||null,a.categoria||null,edad!==null?edad+' años':null,a.ejemplo?'Ejemplo':null].filter(Boolean).join(' · ');
     const nev=MOMS.filter(([m])=>F[m]).length;
-    return `<details class="ath" data-aid="${a.id}" data-c="${c===null?'':c}" ${openA.has(a.id)?'open':''}>
+ return `${nev?`<div class="qpdf" data-qfor="${a.id}"><span class="qn">${esc(a.nombre)}</span><button type="button" class="btn sm blue" data-pdf="${a.id}">Ficha PDF</button><button type="button" class="btn sm" data-informe="${a.id}">Informe y plan PDF</button></div>`:''}<details class="ath" data-aid="${a.id}" data-c="${c===null?'':c}" ${openA.has(a.id)?'open':''}>
       <summary>
         <div class="who"><span class="avatar">${esc(String(a.nombre||"").split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join("").toUpperCase())}</span><div style="min-width:0"><div class="nm">${esc(a.nombre)}</div><div class="meta">${esc(meta)}</div></div></div>
         <div class="big">${nev}/3<small>evaluaciones ${esc(fTemp)}</small></div>
-        <div class="line2">${nev?`<span class="qpdf"><button type="button" class="btn sm blue" data-pdf="${a.id}">Ficha PDF</button><button type="button" class="btn sm" data-informe="${a.id}">Informe y plan PDF</button></span>`:''}${lc&&lc.imc?`<span class="meta">IMC ${lc.imc.toFixed(1)}${lc.imm?' · IMM '+lc.imm.toFixed(1):''}</span>`:''}
+        <div class="line2">${lc&&lc.imc?`<span class="meta">IMC ${lc.imc.toFixed(1)}${lc.imm?' · IMM '+lc.imm.toFixed(1):''}</span>`:''}
           ${last?`${a.sexo?chip(c):'<span class="chip cn">Indique la rama</span>'}<span class="meta">Yo-Yo ${fm(last.dist)} m</span>${trendHTML(tr)}`:''}</div>
       </summary>
       <div class="body">
@@ -2212,8 +2213,8 @@ $('athletes').addEventListener('change',async e=>{const s=e.target.closest('[dat
   const aid=s.closest('.ath').dataset.aid,a=S.atletas.get(aid);if(!a)return;
   try{await put('atletas',aid,{...a,[s.dataset.plan]:Number(s.value)})}catch(err){}});
 $('athletes').addEventListener('click',async e=>{
-  const pdfb=e.target.closest('[data-pdf]');if(pdfb){e.preventDefault();fichaPDF([pdfb.dataset.pdf]);return}
-  const inf=e.target.closest('[data-informe]');if(inf){e.preventDefault();informePDF(inf.dataset.informe);return}
+  const pdfb=e.target.closest('[data-pdf]');if(pdfb){e.preventDefault();try{fichaPDF([pdfb.dataset.pdf])}catch(err){offerError(err)}return}
+  const inf=e.target.closest('[data-informe]');if(inf){e.preventDefault();try{informePDF(inf.dataset.informe)}catch(err){offerError(err)}return}
   const ev=e.target.closest('[data-eval]');
   if(ev){$('e-atleta').value=ev.dataset.eval;$('e-temp').value=fTemp;$('e-mom').value=ev.dataset.mom;loadEvalForm(true);showTab('evaluar');return}
   const d=e.target.closest('[data-delath]');if(!d)return;
@@ -2787,7 +2788,7 @@ function offerFile(name,blob,kind){
   $('ofOpen').href=offerCur.url;
   const can=!!(navigator.canShare&&(()=>{try{return navigator.canShare({files:[offerCur.file]})}catch(e){return false}})());
   $('ofShare').textContent=can?'Guardar o compartir':'Descargar';
-  $('ofMail').hidden=false;$('ofMsg').textContent='';
+  ['ofShare','ofMail','ofOpen'].forEach(id=>$(id).hidden=false);document.querySelector('label[for="ofTo"]').parentElement.hidden=false;$('ofMsg').textContent='';
   $('ofTo').value=local.get('yoyo-mail','')||'';
   $('offer').hidden=false;
 }
@@ -2814,6 +2815,9 @@ $('ofMail').onclick=()=>{
   ofShareNow(true);
 };
 $('ofClose').onclick=()=>{$('offer').hidden=true};
+function offerError(err){const msg=typeof err==='string'?err:('Ocurrió un error: '+(err&&err.message||err));
+  $('ofTitle').textContent='No se pudo generar';$('ofName').textContent=msg;
+  ['ofShare','ofMail','ofOpen'].forEach(id=>$(id).hidden=true);document.querySelector('label[for="ofTo"]').parentElement.hidden=true;$('offer').hidden=false}
 async function pdfSave(doc,name,toastId){
   try{offerFile(name,doc.output('blob'),'PDF');toast(toastId,'PDF listo: '+name)}
   catch(e){toast(toastId,'No se pudo generar el PDF: '+(e&&e.message||e),true)}
@@ -2915,7 +2919,7 @@ function fichaPage(doc,aid,temp){
 }
 function newDoc(orient){const {jsPDF}=window.jspdf;return new jsPDF({orientation:orient||'portrait',unit:'mm',format:'a4'})}
 function fichaPDF(ids){
-  if(!window.jspdf){toast('xtoast','No se pudo cargar el generador de PDF.',true);return}
+  if(!window.jspdf){offerError('No se pudo cargar el generador de PDF. Cierre y abra la app con internet.');return}
   const temp=fTemp;const doc=newDoc();
   ids.forEach((id,i)=>{if(i)doc.addPage();fichaPage(doc,id,temp)});
   pdfFooters(doc);
@@ -2984,9 +2988,9 @@ function pdfRadar(doc,L,base,cx,cy,R){
   doc.setFillColor(...COL.court);pts.forEach(p=>doc.circle(p[0],p[1],0.9,'F'));
 }
 function informePDF(aid){
-  if(!window.jspdf){toast('xtoast','No se pudo cargar el generador de PDF.',true);return}
+  if(!window.jspdf){offerError('No se pudo cargar el generador de PDF. Cierre y abra la app con internet.');return}
   const L=athleteLevel(aid,fTemp);
-  if(!L.has||!L.sexo){toast('xtoast','Indique la rama y registre una evaluación para generar el informe.',true);return}
+  if(!L.has||!L.sexo){offerError('Para el informe, indique la rama de la atleta (en Evaluar) y registre al menos una evaluación.');return}
   const a=L.a,P=buildPlan(L,a.planSem||8,a.planSes||3),base=athleteLevel(aid,fTemp,'pre');
   const showBase=base.has&&Object.values(L.vals).some(v=>v.mom!=='pre');
   const doc=newDoc(),W=doc.internal.pageSize.getWidth();
