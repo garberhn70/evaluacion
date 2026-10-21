@@ -388,6 +388,27 @@ h4{font:700 17px var(--display);margin:0 0 6px}
 .uhint b{color:var(--court)}
 @media (max-width:520px){.test{grid-template-columns:1fr}.test .tres{text-align:left;min-width:0}.uin input{padding-right:44px}.uin span{right:7px;padding:2px 5px}}
 
+/* Cronómetro por prueba */
+.tmr-open{grid-column:1/-1;justify-self:start;display:inline-flex;gap:8px;align-items:center}
+.tmr{grid-column:1/-1;border:2px solid var(--court);border-radius:14px;background:var(--surface);padding:14px;display:flex;flex-direction:column;gap:12px}
+.tmr[data-st="run"]{border-color:var(--zone);background:var(--zone-soft)}
+.tmr[data-st="done"]{border-color:var(--ok);background:var(--ok-soft)}
+.tmr .disp{font:700 clamp(56px,16vw,96px)/1 var(--display);font-variant-numeric:tabular-nums;text-align:center;color:var(--ink)}
+.tmr .disp small{font-size:.35em;color:var(--muted);margin-left:4px}
+.tmr .sub{text-align:center;font-size:14px;color:var(--muted)}
+.tmr .cnt{font:700 22px var(--display);text-align:center;color:var(--court)}
+.tmr .acts{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.tmr .acts .btn{flex:1 1 140px;min-height:64px;font-size:22px}
+.tmr .big{min-height:96px!important;font-size:30px!important;flex-basis:100%!important}
+.tmr .row{justify-content:center}
+
+/* Evaluador */
+.gate{position:fixed;inset:0;z-index:100;background:rgba(15,30,51,.55);display:grid;place-items:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.gate-card{background:var(--surface);color:var(--ink);border-radius:18px;padding:22px;max-width:480px;width:100%;display:flex;flex-direction:column;gap:12px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+.gate-card h2{font-size:28px}
+.hero .evchip{cursor:pointer;font:600 12px var(--body)}
+
+
 /* Toque cómodo en pantallas táctiles */
 button,select,input,summary{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 @media (pointer:coarse){
@@ -499,6 +520,7 @@ button,select,input,summary{touch-action:manipulation;-webkit-tap-highlight-colo
       <h1>Evaluación Física <span>Voleibol</span></h1>
       <p class="sub">Ficha de 10 pruebas para pretemporada, mitad y fin de temporada, con nivel físico y plan de mejora por atleta.</p>
       <div class="meta">
+        <button type="button" class="hint evchip" id="evChip" title="Cambiar quién evalúa"></button>
         <p class="hint" id="storeNote">Datos guardados en este dispositivo</p>
         <button class="fs" id="fsBtn" hidden>Pantalla completa</button>
       </div>
@@ -863,7 +885,26 @@ button,select,input,summary{touch-action:manipulation;-webkit-tap-highlight-colo
   <footer class="sig">
     <b>Patricia Castro Bondy</b>
     <span>Entrenadora</span>
+    <p class="hint" id="sigEval" style="margin-top:6px"></p>
   </footer>
+</div>
+<div class="gate" id="evalGate" role="dialog" aria-modal="true" aria-labelledby="gateTitle" hidden>
+  <form class="gate-card" id="gateForm" autocomplete="on">
+    <span class="ico" style="width:52px;height:52px;border-radius:14px;background:var(--court);color:var(--on-accent)"><svg class="ic" style="width:28px;height:28px" aria-hidden="true"><use href="#i-team"/></svg></span>
+    <p class="eyebrow">Antes de empezar</p>
+    <h2 id="gateTitle">¿Quién realiza la evaluación?</h2>
+    <p class="hint">Su nombre quedará registrado en cada evaluación, en las fichas, en los informes PDF y en los archivos que descargue.</p>
+    <div class="grid">
+      <div class="field"><label for="g-nombre">Nombre</label><input id="g-nombre" autocomplete="given-name" placeholder="Patricia" required></div>
+      <div class="field"><label for="g-apellido">Apellido</label><input id="g-apellido" autocomplete="family-name" placeholder="Castro Bondy" required></div>
+      <div class="field full"><label for="g-cargo">Cargo</label>
+        <select id="g-cargo"><option>Entrenadora</option><option>Entrenador</option><option>Profesora</option><option>Profesor</option><option>Asistente técnico</option><option>Preparador físico</option><option>Fisioterapeuta</option></select></div>
+    </div>
+    <p class="toast err" id="gateErr"></p>
+    <div class="row"><button class="btn primary" type="submit" id="gateGo">Continuar</button><button type="button" class="link" id="gateCancel" hidden>Cancelar</button></div>
+  </form>
+</div>
+<div hidden>
 </div>
 <script>/** @license
  *
@@ -1725,6 +1766,7 @@ function buildTestBlocks(){
         <div class="tres empty" id="res-${T.key}">—</div>
         <p class="uhint"><b>Anote en:</b> ${esc(uhint)}</p>
         ${inputs}
+        ${TIMED[T.key]?`<div class="tmr" data-tmr="${T.key}" hidden></div><button type="button" class="btn sm tmr-open" data-tmropen="${T.key}">${icon('timer','ic-sm')} ${TIMED[T.key].btn}</button>`:''}
         <details><summary>Ver cómo se hace</summary>${DIAG[T.key]()}<p>${esc(T.como)}</p><p class="mat">Material: ${esc(T.material)}</p></details>
       </div>`}).join('')}
   </section>`).join('');
@@ -1829,11 +1871,12 @@ $('evf').onsubmit=async e=>{
     const ev={...readForm(),atletaId:aid};
     const id=evalId(aid,ev.temporada,ev.momento);
     const old=S.evaluaciones.get(id);
-    await put('evaluaciones',id,{...ev,sel:SEL_KEYS.filter(k=>selSet.has(k)),creado:old&&old.creado||Date.now(),actualizado:Date.now()});
+    const evs=Array.from(new Set([...(old&&old.evaluadores||[]),...(old&&old.evaluador?[old.evaluador]:[]),evFull()].filter(Boolean)));
+    await put('evaluaciones',id,{...ev,sel:SEL_KEYS.filter(k=>selSet.has(k)),evaluador:evFull(),evaluadores:evs,creado:old&&old.creado||Date.now(),actualizado:Date.now()});
     local.set('yoyo-sel',SEL_KEYS.filter(k=>selSet.has(k)));
     const pid='ev-'+id, near=yoyoFor(id,ev);
     const sameAsHistory=!S.pruebas.has(pid)&&near&&!yy.empty&&near.dist===yy.dist;
-    if(!yy.empty&&!sameAsHistory) await put('pruebas',pid,{atletaId:aid,fecha:ev.fecha,version:'IR1',level:yy.level,rep:yy.rep,dist:yy.dist,evalId:id,nota:'Evaluación '+MOM_LONG[ev.momento].toLowerCase(),creado:(S.pruebas.get(pid)||{}).creado||Date.now()});
+    if(!yy.empty&&!sameAsHistory) await put('pruebas',pid,{atletaId:aid,fecha:ev.fecha,version:'IR1',level:yy.level,rep:yy.rep,dist:yy.dist,evalId:id,evaluador:evFull(),nota:'Evaluación '+MOM_LONG[ev.momento].toLowerCase(),creado:(S.pruebas.get(pid)||{}).creado||Date.now()});
     else if(S.pruebas.has(pid)) await del('pruebas',pid);
     toast('e-toast',`Guardado: ${atl.nombre}, ${MOM_LONG[ev.momento].toLowerCase()} ${ev.temporada}.`);
     if(storageRisk&&S.mode==='local') showBackupText(backupData(),'Evaluación guardada. Copie ahora el respaldo y péguelo en Notas: si la página se recarga, los datos de esta página pueden borrarse.');
@@ -1842,6 +1885,31 @@ $('evf').onsubmit=async e=>{
   $('e-save').disabled=false;
 };
 
+
+
+/* =========================================================
+   Evaluador: quien toma la prueba
+   ========================================================= */
+let EVALUADOR=local.get('yoyo-evaluador',null);
+const evName=()=>EVALUADOR?`${EVALUADOR.nombre} ${EVALUADOR.apellido}`.trim():'';
+const evFull=()=>EVALUADOR?`${evName()} (${EVALUADOR.cargo})`:'';
+function renderEvaluador(){
+  $('evChip').textContent=EVALUADOR?`Evalúa: ${evName()} · Cambiar`:'Indicar quién evalúa';
+  $('sigEval').textContent=EVALUADOR?`Evaluación a cargo de ${evName()}, ${EVALUADOR.cargo.toLowerCase()}`:'';
+}
+function openGate(change){
+  $('g-nombre').value=EVALUADOR?EVALUADOR.nombre:'';$('g-apellido').value=EVALUADOR?EVALUADOR.apellido:'';
+  if(EVALUADOR)$('g-cargo').value=EVALUADOR.cargo;
+  $('gateCancel').hidden=!change||!EVALUADOR;$('gateErr').textContent='';$('evalGate').hidden=false;setTimeout(()=>$('g-nombre').focus(),50);
+}
+$('gateForm').onsubmit=e=>{e.preventDefault();
+  const n=$('g-nombre').value.trim().replace(/\s+/g,' '),a=$('g-apellido').value.trim().replace(/\s+/g,' ');
+  if(n.length<2||a.length<2){$('gateErr').textContent='Escriba nombre y apellido.';return}
+  EVALUADOR={nombre:n,apellido:a,cargo:$('g-cargo').value};local.set('yoyo-evaluador',EVALUADOR);
+  $('evalGate').hidden=true;renderEvaluador();scheduleRender();};
+$('gateCancel').onclick=()=>{$('evalGate').hidden=true};
+$('evChip').onclick=()=>openGate(true);
+renderEvaluador();if(!EVALUADOR)openGate(false);
 
 /* =========================================================
    Pruebas de la sesión, evaluaciones en curso y respaldo
@@ -2058,7 +2126,7 @@ function fichaTable(a,F){
     for(const T of TESTS.filter(t=>t.grupo===g)) rows+=`<tr><td>${T.n}. ${T.nombre}</td>${MOMS.map(([m])=>cell(m,C=>C.R[T.key].val,T)).join('')}</tr>`;
   }
   const notas=MOMS.filter(([m])=>F[m]&&F[m].ev.notas).map(([m,l])=>`<p class="hint"><b>${l}:</b> ${esc(F[m].ev.notas)}</p>`).join('');
-  return `<div class="tbl"><table><thead><tr><th>Ficha ${esc(fTemp)}</th>${MOMS.map(([m,l])=>`<th class="num">${l}${F[m]?'<br><span style="text-transform:none;letter-spacing:0">'+fdate(F[m].ev.fecha)+'</span>':''}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>
+  return `<div class="tbl"><table><thead><tr><th>Ficha ${esc(fTemp)}</th>${MOMS.map(([m,l])=>`<th class="num">${l}${F[m]?'<br><span style="text-transform:none;letter-spacing:0">'+fdate(F[m].ev.fecha)+(F[m].ev.evaluadores&&F[m].ev.evaluadores.length?'<br>'+esc(F[m].ev.evaluadores.map(x=>x.replace(/ \(.*\)$/,'')).join(', ')):'')+'</span>':''}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>
     <p class="hint">El porcentaje compara con la pretemporada. Verde: mejora de 2 % o más; rojo: baja de 2 % o más (en sprints y T-Test, menos tiempo es mejora).</p>${notas}`;
 }
 function renderAthletes(){
@@ -2150,14 +2218,14 @@ $('delEx').onclick=async()=>{
   }catch(err){}
 };
 $('copyEvals').onclick=()=>{
-  const head=['Atleta','Rama','Posicion','Categoria','Temporada','Momento','Fecha','Edad','Peso kg','Talla cm','IMC','Masa muscular kg','IMM',...TESTS.map(T=>`${T.nombre} (${T.unidad})`),'Notas'];
+  const head=['Atleta','Rama','Posicion','Categoria','Temporada','Momento','Fecha','Edad','Peso kg','Talla cm','IMC','Masa muscular kg','IMM',...TESTS.map(T=>`${T.nombre} (${T.unidad})`),'Notas','Evaluado por','Archivo generado por'];
   const q=s=>`"${String(s??'').replace(/"/g,'""')}"`;
   const lines=[head.map(q).join(',')];
   const evs=[...S.evaluaciones.entries()].sort((x,y)=>(x[1].fecha||'').localeCompare(y[1].fecha||''));
   for(const [id,ev] of evs){const a=S.atletas.get(ev.atletaId)||{};const C=computeEval(ev,a,yoyoFor(id,ev));
     lines.push([a.nombre,a.sexo==='F'?'Femenina':a.sexo==='M'?'Masculina':'',a.posicion,a.categoria,ev.temporada,MOM_LONG[ev.momento],fdate(ev.fecha),C.edad??'',
       C.peso??'',C.talla??'',C.imc?C.imc.toFixed(1):'',C.mm??'',C.imm?C.imm.toFixed(1):'',
-      ...TESTS.map(T=>{const v=C.R[T.key].val;return v===null?'':Number(v.toFixed(T.dec??1))}),ev.notas].map(q).join(','))}
+      ...TESTS.map(T=>{const v=C.R[T.key].val;return v===null?'':Number(v.toFixed(T.dec??1))}),ev.notas,(ev.evaluadores&&ev.evaluadores.join('; '))||ev.evaluador||'',evFull()].map(q).join(','))}
   if(lines.length<2){toast('xtoast','Todavía no hay evaluaciones.',true);return}
   copyText(lines.join('\n'),'xtoast','csvEvals');
 };
@@ -2600,10 +2668,10 @@ $('saveRun').onclick=async()=>{
     for(const x of r){
       let aid=findAthleteByName(x.name);
       if(!aid){aid=newId();await put('atletas',aid,{nombre:x.name,sexo:'',posicion:'',creado:Date.now()});nuevos++}
-      const data={atletaId:aid,fecha,version:mode,level:x.level,rep:x.rep,dist:x.d,nota:'Tomada con el cronómetro',creado:Date.now()};
+      const data={atletaId:aid,fecha,version:mode,level:x.level,rep:x.rep,dist:x.d,nota:'Tomada con el cronómetro',evaluador:evFull(),creado:Date.now()};
       if(mom){
         const eid=evalId(aid,temp,mom);
-        if(!S.evaluaciones.has(eid)) await put('evaluaciones',eid,{atletaId:aid,temporada:temp,momento:mom,fecha,t:{},notas:'',creado:Date.now(),actualizado:Date.now()});
+        if(!S.evaluaciones.has(eid)) await put('evaluaciones',eid,{atletaId:aid,temporada:temp,momento:mom,fecha,t:{},notas:'',evaluador:evFull(),evaluadores:[evFull()].filter(Boolean),creado:Date.now(),actualizado:Date.now()});
         await put('pruebas','ev-'+eid,{...data,evalId:eid});
       }else await put('pruebas',newId(),data);
     }
@@ -2654,7 +2722,7 @@ $('ef').onsubmit=async e=>{
       if(!nombre){toast('etoast','Escriba el nombre del atleta.',true);$('saveEntry').disabled=false;return}
       aid=findAthleteByName(nombre)||newId(); if(!S.atletas.has(aid)) await put('atletas',aid,{nombre,sexo,posicion:'',creado:Date.now()});
     }else{const a=S.atletas.get(aid);if(a&&a.sexo!==sexo) await put('atletas',aid,{...a,sexo})}
-    await put('pruebas',newId(),{atletaId:aid,fecha:$('f-fecha').value||todayISO(),version:ver,level:r.level,rep:r.rep,dist:r.dist,nota:$('f-nota').value.trim(),creado:Date.now()});
+    await put('pruebas',newId(),{atletaId:aid,fecha:$('f-fecha').value||todayISO(),version:ver,level:r.level,rep:r.rep,dist:r.dist,nota:$('f-nota').value.trim(),evaluador:evFull(),creado:Date.now()});
     toast('etoast',`Guardado: ${S.atletas.get(aid)?.nombre||''}, ${lrOf(r)} (${fm(r.dist)} m).`);
     $('f-res').value='';$('f-nota').value='';$('f-nombre').value='';fillYoAthletes();$('f-atleta').value=aid;$('newFields').hidden=true;calcPreview();
   }catch(err){toast('etoast','No se pudo guardar. Revise la conexión e intente de nuevo.',true)}
@@ -2727,7 +2795,8 @@ function pdfFooters(doc){
     doc.setDrawColor(...COL.court);doc.setLineWidth(0.5);doc.line(12,H-17,W-12,H-17);
     doc.setTextColor(...COL.ink);doc.setFont('helvetica','bold');doc.setFontSize(10.5);doc.text('Patricia Castro Bondy',12,H-11);
     doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...COL.zone);doc.text('ENTRENADORA',12,H-7);
-    doc.setTextColor(...COL.muted);doc.text(`Generado el ${fdate(todayISO())} · Página ${i} de ${n}`,W-12,H-9,{align:'right'});
+    doc.setTextColor(...COL.muted);doc.text(`Generado el ${fdate(todayISO())} · Página ${i} de ${n}`,W-12,H-11,{align:'right'});
+    if(EVALUADOR){doc.setTextColor(...COL.ink);doc.text(pdfSafe(`Generado por: ${evFull()}`),W-12,H-7,{align:'right'})}
   }
 }
 function needSpace(doc,y,h){const H=doc.internal.pageSize.getHeight();if(y+h>H-22){doc.addPage();return 16}return y}
@@ -2746,7 +2815,8 @@ function fichaPage(doc,aid,temp){
     body:[
       ['Nombre de la jugadora',pdfSafe(a.nombre),'Posición',pdfSafe(a.posicion||'—')],
       ['Categoría / Edad',pdfSafe([a.categoria,edad!==null?edad+' años':null].filter(Boolean).join(' / ')||'—'),'Rama',a.sexo==='F'?'Femenina':a.sexo==='M'?'Masculina':'—'],
-      ['Fecha de nacimiento',a.nac?fdate(a.nac):'—','Fechas evaluadas',MOMS.map(([m,l])=>F[m]?`${l} ${fdate(F[m].ev.fecha)}`:null).filter(Boolean).join(' · ')||'—']
+      ['Fecha de nacimiento',a.nac?fdate(a.nac):'—','Fechas evaluadas',MOMS.map(([m,l])=>F[m]?`${l} ${fdate(F[m].ev.fecha)}`:null).filter(Boolean).join(' · ')||'—'],
+      ['Evaluado por',{content:pdfSafe(MOMS.map(([m,l])=>F[m]&&(F[m].ev.evaluadores||[F[m].ev.evaluador]).filter(Boolean).length?`${l}: ${(F[m].ev.evaluadores||[F[m].ev.evaluador]).filter(Boolean).join(', ')}`:null).filter(Boolean).join(' · ')||'—'),colSpan:3}]
     ]});
   y=doc.lastAutoTable.finalY+3;
   const base=F.pre;
@@ -2784,7 +2854,7 @@ function fichaPage(doc,aid,temp){
   doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...COL.court);doc.text('Notas / comentarios del entrenador',12,y);
   // Firma a la derecha, a la altura de las notas
   doc.setDrawColor(...COL.ink);doc.setLineWidth(0.4);doc.line(W-76,y+16,W-12,y+16);
-  doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...COL.muted);doc.text('Firma de la entrenadora',W-44,y+20,{align:'center'});
+  doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...COL.muted);doc.text(pdfSafe(EVALUADOR?`${evName()} · ${EVALUADOR.cargo}`:'Firma de la entrenadora'),W-44,y+20,{align:'center'});
   y+=5;
   if(notas.length){doc.setFontSize(9);doc.setTextColor(...COL.ink);
     notas.forEach(([m,l])=>{const lines=doc.splitTextToSize(pdfSafe(`${l}: ${F[m].ev.notas}`),W-100);y=needSpace(doc,y,lines.length*4.4);doc.text(lines,12,y);y+=lines.length*4.4+1})}
@@ -2834,7 +2904,7 @@ function teamPDF(){
 }
 function yoyoRunPDF(){
   const r=runRows();if(!r.length)return;
-  const doc=newDoc();let y=pdfHeader(doc,`PRUEBA YO-YO ${mode}`,'Fecha '+fdate(todayISO()));
+  const doc=newDoc();let y=pdfHeader(doc,`PRUEBA YO-YO ${mode}`,'Fecha '+fdate(todayISO())+(EVALUADOR?' · Evaluó: '+evName():''));
   doc.autoTable({startY:y,head:[['#','Jugador','Nivel','Distancia','VO2máx est.','Clasificación','Estado']],
     body:r.map((x,i)=>[i+1,pdfSafe(x.name),x.lr,fm(x.d)+' m',x.vo2?x.vo2.toFixed(1):'—',x.c!==null?CLASSES[x.c]:'—',x.estado]),
     theme:'grid',headStyles:{fillColor:COL.ink,textColor:255},styles:{fontSize:9.5,lineColor:COL.line,lineWidth:0.2,textColor:COL.ink},
@@ -2872,7 +2942,8 @@ function informePDF(aid){
     columnStyles:{0:{fontStyle:'bold',textColor:COL.muted,cellWidth:30},2:{fontStyle:'bold',textColor:COL.muted,cellWidth:30}},
     body:[['Atleta',pdfSafe(a.nombre),'Posición',pdfSafe(a.posicion||'—')],
           ['Categoría / Edad',pdfSafe([a.categoria,L.edad!==null?L.edad+' años':null].filter(Boolean).join(' / ')||'—'),'Rama',a.sexo==='F'?'Femenina':'Masculina'],
-          ['Última evaluación',L.lastFecha?fdate(L.lastFecha):'—','Nivel general',`${lvlName(L.general)} (${L.general.toFixed(1)} de 5)`]]});
+          ['Última evaluación',L.lastFecha?fdate(L.lastFecha):'—','Nivel general',`${lvlName(L.general)} (${L.general.toFixed(1)} de 5)`],
+          ['Elaborado por',{content:pdfSafe(evFull()||'—'),colSpan:3}]]});
   y=doc.lastAutoTable.finalY+4;
   pdfRadar(doc,L,showBase?base:null,58,y+38,28);
   if(showBase){doc.setFontSize(7.5);doc.setTextColor(...COL.muted);doc.text('Punteado: pretemporada · Azul: última evaluación',58,y+84,{align:'center'})}
@@ -2942,7 +3013,81 @@ function renderData(){
 }
 $('r-test').innerHTML=TESTS.map(T=>`<option value="${T.key}">${T.n}. ${T.nombre}</option>`).join('')+'<option value="imc">IMC</option><option value="imm">IMM</option>';
 $('e-temp').value=String(new Date().getFullYear());$('e-fecha').value=todayISO();
+
+/* =========================================================
+   Cronómetro y temporizador de las pruebas con tiempo
+   ========================================================= */
+const TIMED={
+  s5:{mode:'sw',dec:2,btn:'Cronómetro',sub:'Toque Iniciar cuando la atleta arranque y Detener cuando el pecho cruce la línea.'},
+  s10:{mode:'sw',dec:2,btn:'Cronómetro',sub:'Toque Iniciar cuando la atleta arranque y Detener cuando el pecho cruce la línea.'},
+  ttest:{mode:'sw',dec:2,btn:'Cronómetro',sub:'Toque Iniciar al salir del cono A y Detener al volver a cruzarlo.'},
+  plancha:{mode:'sw',dec:0,btn:'Cronómetro',sub:'Toque Iniciar cuando la atleta quede alineada y Detener cuando pierda la posición.'},
+  burpees:{mode:'cd',secs:60,btn:'Temporizador 60 s y contador',sub:'Toque Iniciar: suena el bip y empiezan los 60 s. Toque +1 por cada repetición completa. Al final suena el bip y se anota el total.'}
+};
+let tmrCtx=null;
+function tmrAudio(){try{if(!tmrCtx){const AC=window.AudioContext||window.webkitAudioContext;tmrCtx=new AC()}if(tmrCtx.state==='suspended')tmrCtx.resume()}catch(e){}return tmrCtx}
+function bip(long){const c=tmrAudio();if(!c)return;const t=c.currentTime+0.01,d=long?0.7:0.25;
+  const o=c.createOscillator(),g=c.createGain();o.type='square';o.frequency.value=long?880:1320;
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.35,t+0.01);g.gain.setValueAtTime(0.35,t+d-0.03);g.gain.linearRampToValueAtTime(0,t+d);
+  o.connect(g).connect(c.destination);o.start(t);o.stop(t+d+0.02);
+  try{navigator.vibrate&&navigator.vibrate(long?400:120)}catch(e){}}
+const tmrState={};
+function tmrTargets(k){const T=TESTS.find(t=>t.key===k);return Array.from({length:T.intentos},(_,i)=>$(`in-${k}-${i}`))}
+function tmrNextIdx(k){const ins=tmrTargets(k);const i=ins.findIndex(x=>!x.value.trim());return i<0?ins.length-1:i}
+function tmrRender(k){
+  const box=document.querySelector(`[data-tmr="${k}"]`),st=tmrState[k],cfg=TIMED[k],T=TESTS.find(t=>t.key===k);if(!box||!st)return;
+  box.dataset.st=st.run?'run':st.done?'done':'idle';
+  const n=T.intentos,target=st.idx;
+  const pick=n>1?`<div class="row"><span class="lbl">Anotar en</span>${Array.from({length:n},(_,i)=>`<button type="button" class="selchip" data-tmrpick="${k}" data-i="${i}" aria-pressed="${i===target}"><span class="box"></span>Intento ${i+1}</button>`).join('')}</div>`:'';
+  if(cfg.mode==='sw'){
+    box.innerHTML=`<div class="disp" data-disp>${fmtT(st.el,cfg.dec)}<small>s</small></div><p class="sub">${esc(cfg.sub)}</p>${pick}
+      <div class="acts">${st.run?`<button type="button" class="btn primary big" data-tmrstop="${k}">Detener</button>`
+        :`<button type="button" class="btn blue big" data-tmrgo="${k}">${st.done?'Iniciar otro intento':'Iniciar'}</button>`}
+        ${st.run?'':`<button type="button" class="btn" data-tmrclose="${k}">Cerrar</button>`}</div>
+      ${st.done?`<p class="sub" style="color:var(--ok);font-weight:700">Anotado ${fmtT(st.last,cfg.dec)} s en el intento ${st.lastIdx+1}</p>`:''}`;
+  }else{
+    const left=Math.max(0,cfg.secs-st.el);
+    box.innerHTML=`<div class="disp" data-disp>${fmtT(left,0)}<small>s</small></div><p class="sub">${esc(cfg.sub)}</p>
+      <div class="cnt" data-cnt>${st.count} repeticiones</div>
+      <div class="acts">${st.run?`<button type="button" class="btn primary big" data-tmrplus="${k}">+1 repetición</button><button type="button" class="btn" data-tmrminus="${k}">−1</button><button type="button" class="btn" data-tmrstop="${k}">Detener</button>`
+        :`<button type="button" class="btn blue big" data-tmrgo="${k}">${st.done?'Repetir prueba':'Iniciar'}</button><button type="button" class="btn" data-tmrclose="${k}">Cerrar</button>`}</div>
+      ${st.done?`<p class="sub" style="color:var(--ok);font-weight:700">Anotado: ${st.count} repeticiones</p>`:''}`;
+  }
+}
+const fmtT=(v,d)=>Number(v).toFixed(d);
+function tmrTick(k){const st=tmrState[k];if(!st||!st.run)return;const cfg=TIMED[k];
+  st.el=(performance.now()-st.t0)/1000;
+  const disp=document.querySelector(`[data-tmr="${k}"] [data-disp]`);
+  if(cfg.mode==='cd'){if(st.el>=cfg.secs){tmrStop(k,true);return}if(disp)disp.firstChild.nodeValue=fmtT(Math.ceil(cfg.secs-st.el),0)}
+  else if(disp)disp.firstChild.nodeValue=fmtT(st.el,cfg.dec===0?0:1);
+  st.raf=requestAnimationFrame(()=>tmrTick(k));}
+function tmrStart(k){const cfg=TIMED[k],prev=tmrState[k]||{};
+  tmrState[k]={run:true,done:false,t0:performance.now(),el:0,count:0,idx:cfg.mode==='sw'?(prev.idx!==undefined&&!prev.done?prev.idx:tmrNextIdx(k)):0};
+  bip(false);tmrRender(k);tmrTick(k);keepAwakeTmr();}
+function tmrStop(k,auto){const st=tmrState[k],cfg=TIMED[k];if(!st||!st.run)return;cancelAnimationFrame(st.raf);
+  st.el=cfg.mode==='cd'?Math.min(cfg.secs,(performance.now()-st.t0)/1000):(performance.now()-st.t0)/1000;st.run=false;st.done=true;bip(true);
+  const ins=tmrTargets(k);
+  if(cfg.mode==='sw'){const v=Number(st.el.toFixed(cfg.dec));ins[st.idx].value=String(cfg.dec?v.toFixed(cfg.dec):Math.round(v));st.last=v;st.lastIdx=st.idx;st.idx=tmrNextIdx(k)}
+  else{ins[0].value=String(st.count)}
+  ins.forEach(x=>x.dispatchEvent(new Event('input',{bubbles:true})));
+  tmrRender(k);releaseTmr();}
+let tmrWake=null;
+async function keepAwakeTmr(){try{tmrWake=await navigator.wakeLock.request('screen')}catch(e){}}
+function releaseTmr(){if(Object.values(tmrState).some(s=>s.run))return;try{tmrWake&&tmrWake.release()}catch(e){}tmrWake=null}
+$('testBlocks').addEventListener('click',e=>{
+  const g=a=>{const b=e.target.closest(`[${a}]`);return b?b.getAttribute(a):null};
+  let k;
+  if((k=g('data-tmropen'))){tmrAudio();const box=document.querySelector(`[data-tmr="${k}"]`);box.hidden=false;e.target.closest('[data-tmropen]').hidden=true;
+    tmrState[k]=tmrState[k]||{run:false,done:false,el:0,count:0,idx:TIMED[k].mode==='sw'?tmrNextIdx(k):0};tmrRender(k);box.scrollIntoView({behavior:'smooth',block:'center'});return}
+  if((k=g('data-tmrgo'))){tmrStart(k);return}
+  if((k=g('data-tmrstop'))){tmrStop(k);return}
+  if((k=g('data-tmrplus'))){const st=tmrState[k];if(st&&st.run){st.count++;const c=document.querySelector(`[data-tmr="${k}"] [data-cnt]`);if(c)c.textContent=st.count+' repeticiones';try{navigator.vibrate&&navigator.vibrate(30)}catch(err){}}return}
+  if((k=g('data-tmrminus'))){const st=tmrState[k];if(st&&st.run&&st.count>0){st.count--;const c=document.querySelector(`[data-tmr="${k}"] [data-cnt]`);if(c)c.textContent=st.count+' repeticiones'}return}
+  if((k=g('data-tmrpick'))){const st=tmrState[k];if(st&&!st.run){st.idx=Number(e.target.closest('[data-tmrpick]').dataset.i);st.done=false;tmrRender(k)}return}
+  if((k=g('data-tmrclose'))){document.querySelector(`[data-tmr="${k}"]`).hidden=true;document.querySelector(`[data-tmropen="${k}"]`).hidden=false;return}
+});
 buildTestBlocks();levelTable();renderRun();draw();renderThr();calcPreview();
+
 fillEvalAthletes();loadEvalForm(true);
 initStore();
 })();
