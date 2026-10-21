@@ -381,6 +381,13 @@ h4{font:700 17px var(--display);margin:0 0 6px}
 .warnbox{background:var(--out-soft);border:2px solid var(--out);color:var(--ink);font-size:15px}
 .warnbox b{color:var(--out)}
 
+.uin{position:relative;display:flex;align-items:center}
+.uin input{padding-right:52px}
+.uin span{position:absolute;right:10px;font:700 13px var(--body);color:var(--court);background:var(--court-soft);border-radius:6px;padding:2px 6px;pointer-events:none}
+.uhint{grid-column:1/-1;font-size:13px;color:var(--muted);background:var(--sky-soft);border-radius:8px;padding:6px 10px}
+.uhint b{color:var(--court)}
+@media (max-width:520px){.test{grid-template-columns:1fr}.test .tres{text-align:left;min-width:0}.uin input{padding-right:44px}.uin span{right:7px;padding:2px 5px}}
+
 /* Toque cómodo en pantallas táctiles */
 button,select,input,summary{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 @media (pointer:coarse){
@@ -581,11 +588,11 @@ button,select,input,summary{touch-action:manipulation;-webkit-tap-highlight-colo
       <section class="panel" id="antroPanel">
         <div class="block-h"><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-anthro"/></svg></span><h2>Antropometría</h2><span>En reposo, antes del calentamiento</span></div>
         <div class="grid g3">
-          <div class="field"><label for="a-peso">Peso (kg)</label><input id="a-peso" inputmode="decimal" placeholder="62.5"></div>
-          <div class="field"><label for="a-talla">Talla (cm)</label><input id="a-talla" inputmode="decimal" placeholder="176"></div>
-          <div class="field"><label for="a-mm">Masa muscular (kg)</label><input id="a-mm" inputmode="decimal" placeholder="Opcional"></div>
-          <div class="field"><label for="a-alc1">Alcance a 1 mano (cm)</label><input id="a-alc1" inputmode="decimal" placeholder="226"></div>
-          <div class="field"><label for="a-alc2">Alcance a 2 manos (cm)</label><input id="a-alc2" inputmode="decimal" placeholder="222"></div>
+          <div class="field"><label for="a-peso">Peso</label><div class="uin"><input id="a-peso" inputmode="decimal" placeholder="62.5"><span>kg</span></div></div>
+          <div class="field"><label for="a-talla">Talla</label><div class="uin"><input id="a-talla" inputmode="decimal" placeholder="176"><span>cm</span></div></div>
+          <div class="field"><label for="a-mm">Masa muscular</label><div class="uin"><input id="a-mm" inputmode="decimal" placeholder="Opcional"><span>kg</span></div></div>
+          <div class="field"><label for="a-alc1">Alcance a 1 mano</label><div class="uin"><input id="a-alc1" inputmode="decimal" placeholder="226"><span>cm</span></div></div>
+          <div class="field"><label for="a-alc2">Alcance a 2 manos</label><div class="uin"><input id="a-alc2" inputmode="decimal" placeholder="222"><span>cm</span></div></div>
         </div>
         <p class="hint">La masa muscular sale de una báscula de bioimpedancia; si no la tiene, déjela vacía. Los alcances se miden de pie, pegado a la pared, con los talones en el piso: se usan para calcular la altura de los saltos.</p>
         <div class="test" style="display:block;border:0;padding:0"><details><summary>Ver cómo medir los alcances</summary><div id="diag-alcance-ev"></div></details></div>
@@ -1275,37 +1282,37 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 const MOMS=[['pre','Pretemporada'],['mitad','Mitad'],['fin','Fin']];
 const MOM_LONG={pre:'Pretemporada (línea base)',mitad:'Mitad de temporada',fin:'Fin de temporada'};
 const TESTS=[
- {key:'bloqueo',n:1,grupo:'Salto y potencia',nombre:'Salto de bloqueo',unidad:'cm',mejor:'max',intentos:3,ref:'alc2',ph:'Alcance',
+ {key:'bloqueo',n:1,grupo:'Salto y potencia',nombre:'Salto de bloqueo',unidad:'cm',mejor:'max',intentos:3,ref:'alc2',ph:'265',uLabel:'cm',uName:'Centímetros',uHint:'Alcance tocado en el salto, en cm. Ej.: 265',
   como:'En posición de bloqueo, de frente a la pared o al medidor, pies al ancho de hombros. Sin carrera ni paso previo, flexiona y salta tocando lo más alto posible con las dos manos. 3 intentos con 30 s de pausa. Anote el alcance de cada salto en cm; la herramienta resta el alcance a 2 manos.',
   material:'Pared con cinta métrica o medidor de salto; tiza o magnesio en los dedos.'},
- {key:'ataque',n:2,grupo:'Salto y potencia',nombre:'Salto de ataque',unidad:'cm',mejor:'max',intentos:3,ref:'alc1',ph:'Alcance',
+ {key:'ataque',n:2,grupo:'Salto y potencia',nombre:'Salto de ataque',unidad:'cm',mejor:'max',intentos:3,ref:'alc1',ph:'283',uLabel:'cm',uName:'Centímetros',uHint:'Alcance tocado en el salto, en cm. Ej.: 283',
   como:'Carrera de aproximación de ataque (3 o 4 pasos, como en el juego) con batida a dos pies; toca lo más alto posible con la mano de ataque. 3 intentos con 45 s de pausa. Anote el alcance en cm; la herramienta resta el alcance a 1 mano.',
   material:'Mismo medidor que el salto de bloqueo.'},
- {key:'horizontal',n:3,grupo:'Salto y potencia',nombre:'Salto horizontal',unidad:'cm',mejor:'max',intentos:3,ph:'cm',
+ {key:'horizontal',n:3,grupo:'Salto y potencia',nombre:'Salto horizontal',unidad:'cm',mejor:'max',intentos:3,ph:'205',uLabel:'cm',uName:'Centímetros',uHint:'Distancia desde la línea hasta el talón, en cm. Ej.: 205',
   como:'Pies juntos detrás de la línea. Con impulso de brazos, salta hacia adelante a dos pies y cae sin perder el equilibrio ni apoyar las manos. Se mide desde la línea hasta el talón más cercano. 3 intentos con 45 s de pausa.',
   material:'Cinta métrica en el piso.'},
- {key:'s5',n:4,grupo:'Velocidad y agilidad',nombre:'Sprint 5 m',unidad:'s',mejor:'min',intentos:3,dec:2,ph:'s',
+ {key:'s5',n:4,grupo:'Velocidad y agilidad',nombre:'Sprint 5 m',unidad:'s',mejor:'min',intentos:3,dec:2,ph:'1.15',uLabel:'s',uName:'Segundos',uHint:'Tiempo en segundos, con 2 decimales. Ej.: 1.15',
   como:'Salida de pie, pie adelantado 50 cm detrás de la línea. El tiempo empieza con el primer movimiento y termina cuando el pecho cruza la línea. 3 intentos con 2 min de pausa. Con cronómetro manual, que mida siempre la misma persona.',
   material:'Fotoceldas o cronómetro, conos, cinta métrica.'},
- {key:'s10',n:5,grupo:'Velocidad y agilidad',nombre:'Sprint 10 m',unidad:'s',mejor:'min',intentos:3,dec:2,ph:'s',
+ {key:'s10',n:5,grupo:'Velocidad y agilidad',nombre:'Sprint 10 m',unidad:'s',mejor:'min',intentos:3,dec:2,ph:'1.98',uLabel:'s',uName:'Segundos',uHint:'Tiempo en segundos, con 2 decimales. Ej.: 1.98',
   como:'Igual que el sprint de 5 m, con la meta a 10 m. Con fotoceldas, ponga una en 5 m y otra en 10 m y mida las dos en la misma carrera.',
   material:'Fotoceldas o cronómetro, conos.'},
- {key:'ttest',n:6,grupo:'Velocidad y agilidad',nombre:'T-Test de agilidad',unidad:'s',mejor:'min',intentos:2,dec:2,ph:'s',
+ {key:'ttest',n:6,grupo:'Velocidad y agilidad',nombre:'T-Test de agilidad',unidad:'s',mejor:'min',intentos:2,dec:2,ph:'11.20',uLabel:'s',uName:'Segundos',uHint:'Tiempo en segundos, con 2 decimales. Ej.: 11.20',
   como:'Conos en T: A de salida, B a 9,14 m al frente, C y D a 4,57 m a cada lado de B. Sprint de A a B y toca la base del cono; desplazamiento lateral a C y toca; lateral hasta D y toca; lateral de vuelta a B y toca; carrera de espaldas hasta A. No se cruzan los pies; si no toca un cono, el intento se repite. 2 intentos con 3 min de pausa.',
   material:'4 conos, cronómetro, cinta métrica.'},
  {key:'sentadilla',n:7,grupo:'Fuerza',nombre:'Sentadilla (1RM estimado)',unidad:'kg',mejor:'max',tipo:'rm',
   como:'Sentadilla trasera con barra hasta que los muslos queden paralelos al piso. Después del calentamiento, use una carga que permita de 3 a 8 repeticiones con buena técnica y anote la carga y las repeticiones completas. La herramienta estima el 1RM con la fórmula de Brzycki. Solo con atletas que dominan la técnica; en menores de 15 años use una variante sin carga máxima.',
   material:'Barra olímpica, discos, rack con seguros, un ayudante.'},
- {key:'balon',n:8,grupo:'Fuerza',nombre:'Lanzamiento de balón medicinal',unidad:'m',mejor:'max',intentos:3,dec:2,ph:'m',tipo:'balon',
+ {key:'balon',n:8,grupo:'Fuerza',nombre:'Lanzamiento de balón medicinal',unidad:'m',mejor:'max',intentos:3,dec:2,ph:'8.60',uLabel:'m',uName:'Metros',uHint:'Distancia hasta el primer bote, en metros. Ej.: 8.60',tipo:'balon',
   como:'De pie, pies detrás de la línea, lanzamiento a dos manos por encima de la cabeza (como un saque de banda) sin despegar los pies. Se mide hasta el primer bote. 3 intentos con 45 s de pausa. Use siempre el mismo peso de balón: 2 kg en rama femenina o juvenil, 3 kg en rama masculina mayor.',
   material:'Balón medicinal de 2 o 3 kg, cinta métrica de 20 m.'},
- {key:'plancha',n:9,grupo:'Fuerza',nombre:'Plancha isométrica',unidad:'s',mejor:'max',intentos:1,ph:'s',
+ {key:'plancha',n:9,grupo:'Fuerza',nombre:'Plancha isométrica',unidad:'s',mejor:'max',intentos:1,ph:'95',uLabel:'s',uName:'Segundos',uHint:'Tiempo sostenido en segundos. Ej.: 95 (1 min 35 s)',
   como:'Apoyo en antebrazos y puntas de pies, cuerpo alineado de hombros a tobillos. Se detiene cuando la cadera cae o sube después de un aviso. 1 intento. Anote los segundos.',
   material:'Cronómetro, colchoneta.'},
  {key:'yoyo',n:10,grupo:'Resistencia',nombre:'Yo-Yo IR1',unidad:'m',mejor:'max',tipo:'yoyo',
   como:'Prueba Yo-Yo IR1 con el audio o con el cronómetro de la pestaña Yo-Yo. Siempre al final de la sesión. Anote el nivel y la repetición (15.4) o la distancia (920).',
   material:'Conos a 20 m y 5 m, audio o cronómetro de esta página, parlante.'},
- {key:'burpees',n:11,grupo:'Resistencia',nombre:'Burpees en 60 s',unidad:'rep',mejor:'max',intentos:1,ph:'rep',
+ {key:'burpees',n:11,grupo:'Resistencia',nombre:'Burpees en 60 s',unidad:'rep',mejor:'max',intentos:1,ph:'18',uLabel:'rep',uName:'Repeticiones',uHint:'Repeticiones completas en 60 segundos. Ej.: 18',
   como:'De pie: se agacha y apoya las manos en el piso, lanza los pies atrás hasta quedar en plancha, regresa los pies junto a las manos, se pone de pie y salta con los brazos arriba. Se cuentan las repeticiones completas en 60 segundos, sin flexión de pecho. No cuenta la repetición si el cuerpo no queda alineado en la plancha o si no despega los pies en el salto. 1 intento, al final del día 1.',
   material:'Cronómetro, colchoneta o piso firme, una persona que cuente.'}
 ];
@@ -1702,16 +1709,21 @@ function buildTestBlocks(){
     <div class="block-h"><span class="ico">${icon(GROUP_IC[g])}</span><h2>${g}</h2><span>${dia}</span></div>
     ${TESTS.filter(T=>T.grupo===g).map(T=>{
       let inputs='';
-      if(T.tipo==='rm') inputs=`<div class="tin two"><div class="field"><label for="in-sentadilla-carga">Carga (kg)</label><input id="in-sentadilla-carga" inputmode="decimal" placeholder="60"></div><div class="field"><label for="in-sentadilla-reps">Repeticiones</label><input id="in-sentadilla-reps" inputmode="numeric" placeholder="5"></div></div>`;
-      else if(T.tipo==='yoyo') inputs=`<div class="tin one"><div class="field"><label for="in-yoyo">Nivel.rep o metros</label><input id="in-yoyo" inputmode="decimal" placeholder="15.4"></div></div>`;
+      let uhint='';
+      if(T.tipo==='rm'){uhint='Kilos levantados y repeticiones completas (de 1 a 10). Ej.: 50 kg × 6 repeticiones';
+        inputs=`<div class="tin two"><div class="field"><label for="in-sentadilla-carga">Carga</label><div class="uin"><input id="in-sentadilla-carga" inputmode="decimal" placeholder="50"><span>kg</span></div></div><div class="field"><label for="in-sentadilla-reps">Repeticiones</label><div class="uin"><input id="in-sentadilla-reps" inputmode="numeric" placeholder="6"><span>rep</span></div></div></div>`;}
+      else if(T.tipo==='yoyo'){uhint='Nivel y repetición alcanzados (ej.: 15.4) o la distancia total en metros (ej.: 920)';
+        inputs=`<div class="tin one"><div class="field"><label for="in-yoyo">Nivel.rep o metros</label><div class="uin"><input id="in-yoyo" inputmode="decimal" placeholder="15.4"><span>niv / m</span></div></div></div>`;}
       else{
         const n=T.intentos, cls=n===1?'one':n===2?'two':'';
-        inputs=`<div class="tin ${cls}">${T.tipo==='balon'?`<div class="field"><label for="in-balon-kg">Balón (kg)</label><input id="in-balon-kg" inputmode="decimal" placeholder="2"></div>`:''}${Array.from({length:n},(_,i)=>`<div class="field"><label for="in-${T.key}-${i}">${n>1?'Intento '+(i+1):T.ph==='s'?'Segundos':'Valor'}</label><input id="in-${T.key}-${i}" inputmode="decimal" placeholder="${T.ph}"></div>`).join('')}</div>`;
+        uhint=T.uHint+(T.ref?` · Se resta el alcance a ${T.ref==='alc1'?'1 mano':'2 manos'} para obtener la altura del salto`:'');
+        inputs=`<div class="tin ${cls}">${T.tipo==='balon'?`<div class="field"><label for="in-balon-kg">Peso del balón</label><div class="uin"><input id="in-balon-kg" inputmode="decimal" placeholder="2"><span>kg</span></div></div>`:''}${Array.from({length:n},(_,i)=>`<div class="field"><label for="in-${T.key}-${i}">${n>1?'Intento '+(i+1):T.uName}</label><div class="uin"><input id="in-${T.key}-${i}" inputmode="${T.uLabel==='rep'?'numeric':'decimal'}" placeholder="${T.ph}"><span>${T.uLabel}</span></div></div>`).join('')}</div>`;
         if(T.tipo==='balon') inputs=inputs.replace('class="tin "','class="tin" style="grid-template-columns:repeat(4,minmax(0,1fr))"');
       }
       return `<div class="test" data-test="${T.key}">
         <div class="tname">${icon(TEST_IC[T.key])}${T.n}. ${T.nombre}<small>${T.mejor==='min'?'menos es mejor':'mejor intento'}</small></div>
         <div class="tres empty" id="res-${T.key}">—</div>
+        <p class="uhint"><b>Anote en:</b> ${esc(uhint)}</p>
         ${inputs}
         <details><summary>Ver cómo se hace</summary>${DIAG[T.key]()}<p>${esc(T.como)}</p><p class="mat">Material: ${esc(T.material)}</p></details>
       </div>`}).join('')}
