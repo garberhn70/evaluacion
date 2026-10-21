@@ -412,6 +412,11 @@ h4{font:700 17px var(--display);margin:0 0 6px}
 summary{cursor:pointer;-webkit-user-select:none;user-select:none}
 summary::-webkit-details-marker{display:none}
 
+.cloud{margin-top:14px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--sky-soft)}
+.cloud h3{display:flex;gap:8px;align-items:center;margin:0 0 4px;font:700 16px var(--display);color:var(--court)}
+.cloud .cstat{margin:0;font-weight:600}
+.cloud .cstat.ok{color:#1F7A47}.cloud .cstat.bad{color:#C2372B}
+
 .qpdf{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 12px;margin-bottom:-6px;border:1px solid var(--line);border-bottom:0;border-radius:14px 14px 0 0;background:var(--sky-soft)}
 .qpdf .qn{font:700 15px var(--display);color:var(--court);flex:1 1 140px}
 .qpdf .btn{min-height:48px;touch-action:manipulation}
@@ -670,6 +675,22 @@ button,select,input,summary{touch-action:manipulation;-webkit-tap-highlight-colo
           <button type="button" class="btn sm blue" id="restoreMerge">Combinar</button>
           <button type="button" class="btn sm" id="restoreYes">Reemplazar todo</button>
           <button type="button" class="link" id="restoreNo">Cancelar</button>
+        </div>
+      </div>
+      <div class="cloud" id="cloudBox">
+        <h3><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg> Copia en la nube (Google Drive)</h3>
+        <p class="cstat" id="cloudStat">Sin conectar</p>
+        <div id="cloudOff">
+          <p class="hint">Escriba la clave una sola vez en este equipo. Desde entonces, cada vez que guarde algo se sube un respaldo, y cada PDF o Excel que genere también queda en Drive.</p>
+          <div class="row" style="margin-top:8px">
+            <input id="cloudKey" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Clave de la nube" aria-label="Clave de la nube" style="flex:1 1 180px;width:auto">
+            <button type="button" class="btn sm blue" id="cloudConnect">Conectar</button>
+          </div>
+        </div>
+        <div class="row" id="cloudOn" hidden style="margin-top:8px">
+          <button type="button" class="btn sm blue" id="cloudPull">Traer último respaldo de la nube</button>
+          <button type="button" class="btn sm" id="cloudPush">Subir respaldo ahora</button>
+          <button type="button" class="link" id="cloudOut">Desconectar este equipo</button>
         </div>
       </div>
       <p class="toast" id="btoast"></p>
@@ -1697,14 +1718,14 @@ window.addEventListener('beforeunload',e=>{if(storageRisk&&dirtySinceBackup&&S.m
 async function put(col,id,data){
   if(S.mode==='loading') throw new Error('loading');
   if(S.mode==='db') await S.db.collection(col).doc(id).set(data);
-  S[col].set(id,data); if(S.mode!=='db') saveLocal(); scheduleRender();
+  S[col].set(id,data); if(S.mode!=='db') saveLocal(); scheduleRender(); cloudDirty();
 }
 async function del(col,id){
   if(S.mode==='loading') throw new Error('loading');
   if(S.mode==='db') await S.db.collection(col).doc(id).delete();
-  S[col].delete(id); if(S.mode!=='db') saveLocal(); scheduleRender();
+  S[col].delete(id); if(S.mode!=='db') saveLocal(); scheduleRender(); cloudDirty();
 }
-async function saveThr(){ if(S.mode==='db') await S.db.doc('config/umbrales').set({thr:THR,niv:NIV}); else saveLocal(); }
+async function saveThr(){ if(S.mode==='db') await S.db.doc('config/umbrales').set({thr:THR,niv:NIV}); else saveLocal(); cloudDirty(); }
 async function initStore(){
   let db=null;
   try{ db=window.claude&&window.claude.use?await window.claude.use('db'):null }catch(e){db=null}
@@ -2077,6 +2098,83 @@ $('restoreYes').onclick=()=>applyRestore(true);
 $('restoreMerge').onclick=()=>applyRestore(false);
 $('restoreNo').onclick=()=>{pendingRestore=null;$('restoreAsk').hidden=true};
 renderBackupNote();
+
+/* ---------- Copia en la nube (Google Drive de Carlos, por medio de un servicio de Apps Script) ---------- */
+const CLOUD_URL='https://script.google.com/macros/s/AKfycbwVVKLzBtHnxvYN3eEedUIdbT44alUP8oCWlkjx1uqAvzp8lQsykf-SsUcX4OoICCdyOg/exec';
+let cloudT=null,cloudBusy=false,cloudFiles=[];
+const cloudKey=()=>local.get('yoyo-cloud-key','')||'';
+const hhmm=()=>new Date().toLocaleTimeString('es-HN',{hour:'2-digit',minute:'2-digit'});
+function cloudSetStat(t,cls){const el=$('cloudStat');if(!el)return;el.textContent=t;el.className='cstat'+(cls?' '+cls:'')}
+function cloudUI(){
+  const on=!!cloudKey();$('cloudOff').hidden=on;$('cloudOn').hidden=!on;
+  if(!on){cloudSetStat('Sin conectar: los datos solo están en este equipo.');return}
+  const last=local.get('yoyo-cloud-last',null),pend=local.get('yoyo-cloud-pend',false);
+  if(pend||cloudFiles.length) cloudSetStat('Conectado. Hay cambios por subir'+(navigator.onLine===false?' (sin internet: se suben al volver la conexión).':'…'),'bad');
+  else cloudSetStat(last?`Conectado. Último respaldo en la nube: ${last}`:'Conectado a Google Drive.','ok');
+}
+async function cloudPost(body){
+  const r=await fetch(CLOUD_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({clave:cloudKey()},body))});
+  const j=await r.json();if(!j.ok)throw new Error(j.error==='clave'?'clave':j.error||'error');return j;
+}
+async function cloudGet(q){
+  const r=await fetch(CLOUD_URL+'?clave='+encodeURIComponent(cloudKey())+(q||''));
+  const j=await r.json();if(!j.ok)throw new Error(j.error==='clave'?'clave':j.error||'error');return j;
+}
+function cloudDirty(){
+  if(!cloudKey())return;local.set('yoyo-cloud-pend',true);cloudUI();
+  clearTimeout(cloudT);cloudT=setTimeout(cloudFlush,4000);
+}
+async function cloudFlush(){
+  if(!cloudKey()||cloudBusy)return;
+  if(navigator.onLine===false){cloudUI();return}
+  cloudBusy=true;
+  try{
+    if(local.get('yoyo-cloud-pend',false)){
+      cloudSetStat('Subiendo respaldo a la nube…');
+      local.set('yoyo-cloud-pend',false);
+      try{await cloudPost({tipo:'respaldo',contenido:JSON.stringify(backupData())});local.set('yoyo-cloud-last',fdate(todayISO())+' '+hhmm());}
+      catch(e){local.set('yoyo-cloud-pend',true);throw e}
+    }
+    while(cloudFiles.length){
+      const f=cloudFiles[0];cloudSetStat('Subiendo '+f.nombre+' a la nube…');
+      await cloudPost(f);cloudFiles.shift();
+    }
+    cloudUI();
+  }catch(e){
+    if(e.message==='clave'){cloudSetStat('La clave no es correcta. Desconecte y escríbala de nuevo.','bad')}
+    else{cloudSetStat('No se pudo subir a la nube (revise internet). Se reintenta solo.','bad');clearTimeout(cloudT);cloudT=setTimeout(cloudFlush,30000)}
+  }finally{cloudBusy=false}
+}
+function cloudFile(name,blob){
+  if(!cloudKey()||!blob)return;
+  const rd=new FileReader();
+  rd.onload=()=>{const b64=String(rd.result).split(',')[1]||'';
+    cloudFiles=cloudFiles.filter(f=>f.nombre!==name);
+    cloudFiles.push({tipo:'archivo',nombre:name,mime:blob.type||'application/pdf',carpeta:/\.csv$/i.test(name)?'Excel':'PDF',base64:b64});
+    cloudUI();clearTimeout(cloudT);cloudT=setTimeout(cloudFlush,800)};
+  rd.readAsDataURL(blob);
+}
+$('cloudConnect').onclick=async()=>{
+  const k=$('cloudKey').value.trim().toUpperCase();if(!k){toast('btoast','Escriba la clave.',true);return}
+  local.set('yoyo-cloud-key',k);cloudSetStat('Probando la conexión…');
+  try{await cloudGet('&accion=probar');$('cloudKey').value='';cloudUI();toast('btoast','Equipo conectado a Google Drive.');
+    // Si la nube ya tiene datos, ofrecer combinarlos antes de seguir
+    try{const j=await cloudGet('');if(j.respaldo){previewRestore(j.respaldo);$('restoreMsg').textContent='En la nube hay un '+$('restoreMsg').textContent.charAt(0).toLowerCase()+$('restoreMsg').textContent.slice(1)+' Toque Combinar para traerlo a este equipo.'}
+      else if(S.atletas.size)cloudDirty()}catch(e){}
+  }catch(e){local.set('yoyo-cloud-key','');cloudUI();
+    toast('btoast',e.message==='clave'?'Clave incorrecta. Revísela e inténtelo de nuevo.':'No hay conexión con la nube. Revise internet e inténtelo de nuevo.',true)}
+};
+$('cloudPull').onclick=async()=>{
+  cloudSetStat('Buscando el último respaldo en la nube…');
+  try{const j=await cloudGet('');cloudUI();
+    if(!j.respaldo){toast('btoast','Todavía no hay respaldos en la nube.');return}
+    previewRestore(j.respaldo);
+  }catch(e){cloudUI();toast('btoast',e.message==='clave'?'La clave no es correcta.':'No se pudo traer el respaldo. Revise internet.',true)}
+};
+$('cloudPush').onclick=()=>{local.set('yoyo-cloud-pend',true);cloudFlush()};
+$('cloudOut').onclick=()=>{local.set('yoyo-cloud-key','');local.set('yoyo-cloud-pend',false);cloudFiles=[];cloudUI();toast('btoast','Este equipo ya no sube copias a la nube.')};
+window.addEventListener('online',()=>{if(cloudKey())cloudFlush()});
+cloudUI();if(cloudKey()&&local.get('yoyo-cloud-pend',false))setTimeout(cloudFlush,3000);
 
 /* =========================================================
    Atletas, fichas y ranking
@@ -2783,6 +2881,7 @@ function offerFile(name,blob,kind){
   if(offerCur&&offerCur.url)URL.revokeObjectURL(offerCur.url);
   const type=blob.type||'application/octet-stream';
   offerCur={name,blob,type,file:new File([blob],name,{type}),url:URL.createObjectURL(blob)};
+  try{cloudFile(name,blob)}catch(e){}
   $('ofTitle').textContent=(kind||'Archivo')+' listo';
   $('ofName').textContent=name+' · '+Math.max(1,Math.round(blob.size/1024))+' KB';
   $('ofOpen').href=offerCur.url;
