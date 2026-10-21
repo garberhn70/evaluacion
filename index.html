@@ -891,22 +891,7 @@ button,select,input,summary{touch-action:manipulation;-webkit-tap-highlight-colo
     <p class="hint" id="sigEval" style="margin-top:6px"></p>
   </footer>
 </div>
-<div class="gate" id="evalGate" role="dialog" aria-modal="true" aria-labelledby="gateTitle" hidden>
-  <form class="gate-card" id="gateForm" autocomplete="on">
-    <span class="ico" style="width:52px;height:52px;border-radius:14px;background:var(--court);color:var(--on-accent)"><svg class="ic" style="width:28px;height:28px" aria-hidden="true"><use href="#i-team"/></svg></span>
-    <p class="eyebrow">Antes de empezar</p>
-    <h2 id="gateTitle">¿Quién realiza la evaluación?</h2>
-    <p class="hint">Su nombre quedará registrado en cada evaluación, en las fichas, en los informes PDF y en los archivos que descargue.</p>
-    <div class="grid">
-      <div class="field"><label for="g-nombre">Nombre</label><input id="g-nombre" autocomplete="given-name" placeholder="Patricia" required></div>
-      <div class="field"><label for="g-apellido">Apellido</label><input id="g-apellido" autocomplete="family-name" placeholder="Castro Bondy" required></div>
-      <div class="field full"><label for="g-cargo">Cargo</label>
-        <select id="g-cargo"><option>Entrenadora</option><option>Entrenador</option><option>Profesora</option><option>Profesor</option><option>Asistente técnico</option><option>Preparador físico</option><option>Fisioterapeuta</option></select></div>
-    </div>
-    <p class="toast err" id="gateErr"></p>
-    <div class="row"><button class="btn primary" type="submit" id="gateGo">Continuar</button><button type="button" class="link" id="gateCancel" hidden>Cancelar</button></div>
-  </form>
-</div>
+<div id="evalGate" hidden><form id="gateForm"><input id="g-nombre"><input id="g-apellido"><select id="g-cargo"><option>Entrenadora</option></select><p id="gateErr"></p><button id="gateGo"></button><button type="button" id="gateCancel"></button></form></div>
 <div hidden>
 </div>
 <script>/** @license
@@ -1893,12 +1878,13 @@ $('evf').onsubmit=async e=>{
 /* =========================================================
    Evaluador: quien toma la prueba
    ========================================================= */
-let EVALUADOR=local.get('yoyo-evaluador',null);
+/* La entrenadora responsable es fija: no se pide ningún dato al abrir */
+const EVALUADOR={nombre:'Patricia',apellido:'Castro Bondy',cargo:'Entrenadora'};
 const evName=()=>EVALUADOR?`${EVALUADOR.nombre} ${EVALUADOR.apellido}`.trim():'';
 const evFull=()=>EVALUADOR?`${evName()} (${EVALUADOR.cargo})`:'';
 function renderEvaluador(){
   $('evChip').textContent=EVALUADOR?`Evalúa: ${evName()} · Cambiar`:'Indicar quién evalúa';
-  $('sigEval').textContent=EVALUADOR?`Evaluación a cargo de ${evName()}, ${EVALUADOR.cargo.toLowerCase()}`:'';
+  $('sigEval').textContent='';
 }
 function openGate(change){
   $('g-nombre').value=EVALUADOR?EVALUADOR.nombre:'';$('g-apellido').value=EVALUADOR?EVALUADOR.apellido:'';
@@ -1912,7 +1898,7 @@ $('gateForm').onsubmit=e=>{e.preventDefault();
   $('evalGate').hidden=true;renderEvaluador();scheduleRender();};
 $('gateCancel').onclick=()=>{$('evalGate').hidden=true};
 $('evChip').onclick=()=>openGate(true);
-renderEvaluador();if(!EVALUADOR)openGate(false);
+$('evChip').hidden=true;$('evalGate').hidden=true;
 
 /* =========================================================
    Pruebas de la sesión, evaluaciones en curso y respaldo
@@ -2798,8 +2784,8 @@ function pdfFooters(doc){
     doc.setDrawColor(...COL.court);doc.setLineWidth(0.5);doc.line(12,H-17,W-12,H-17);
     doc.setTextColor(...COL.ink);doc.setFont('helvetica','bold');doc.setFontSize(10.5);doc.text('Patricia Castro Bondy',12,H-11);
     doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...COL.zone);doc.text('ENTRENADORA',12,H-7);
-    doc.setTextColor(...COL.muted);doc.text(`Generado el ${fdate(todayISO())} · Página ${i} de ${n}`,W-12,H-11,{align:'right'});
-    if(EVALUADOR){doc.setTextColor(...COL.ink);doc.text(pdfSafe(`Generado por: ${evFull()}`),W-12,H-7,{align:'right'})}
+    doc.setTextColor(...COL.muted);doc.text(`Generado el ${fdate(todayISO())} · Página ${i} de ${n}`,W-12,H-9,{align:'right'});
+
   }
 }
 function needSpace(doc,y,h){const H=doc.internal.pageSize.getHeight();if(y+h>H-22){doc.addPage();return 16}return y}
@@ -2857,7 +2843,7 @@ function fichaPage(doc,aid,temp){
   doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...COL.court);doc.text('Notas / comentarios del entrenador',12,y);
   // Firma a la derecha, a la altura de las notas
   doc.setDrawColor(...COL.ink);doc.setLineWidth(0.4);doc.line(W-76,y+16,W-12,y+16);
-  doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...COL.muted);doc.text(pdfSafe(EVALUADOR?`${evName()} · ${EVALUADOR.cargo}`:'Firma de la entrenadora'),W-44,y+20,{align:'center'});
+  doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...COL.muted);doc.text('Patricia Castro Bondy · Entrenadora',W-44,y+20,{align:'center'});
   y+=5;
   if(notas.length){doc.setFontSize(9);doc.setTextColor(...COL.ink);
     notas.forEach(([m,l])=>{const lines=doc.splitTextToSize(pdfSafe(`${l}: ${F[m].ev.notas}`),W-100);y=needSpace(doc,y,lines.length*4.4);doc.text(lines,12,y);y+=lines.length*4.4+1})}
@@ -2907,7 +2893,7 @@ function teamPDF(){
 }
 function yoyoRunPDF(){
   const r=runRows();if(!r.length)return;
-  const doc=newDoc();let y=pdfHeader(doc,`PRUEBA YO-YO ${mode}`,'Fecha '+fdate(todayISO())+(EVALUADOR?' · Evaluó: '+evName():''));
+  const doc=newDoc();let y=pdfHeader(doc,`PRUEBA YO-YO ${mode}`,'Fecha '+fdate(todayISO()));
   doc.autoTable({startY:y,head:[['#','Jugador','Nivel','Distancia','VO2máx est.','Clasificación','Estado']],
     body:r.map((x,i)=>[i+1,pdfSafe(x.name),x.lr,fm(x.d)+' m',x.vo2?x.vo2.toFixed(1):'—',x.c!==null?CLASSES[x.c]:'—',x.estado]),
     theme:'grid',headStyles:{fillColor:COL.ink,textColor:255},styles:{fontSize:9.5,lineColor:COL.line,lineWidth:0.2,textColor:COL.ink},
