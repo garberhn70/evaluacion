@@ -1,5 +1,5 @@
-/* Service worker de Evaluación Física Voleibol — versión 2026-10-21-9 */
-const CACHE='evaluacion-voleibol-2026-10-21-9';
+/* Service worker de Evaluación Física Voleibol — versión 2026-10-22-1 */
+const CACHE='evaluacion-voleibol-2026-10-22-1';
 const CORE=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-180.png','./icon-maskable-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
