@@ -606,6 +606,8 @@ button,select,input,summary{touch-action:manipulation;-webkit-tap-highlight-colo
             <select id="e-entdia"><option value="1">1 al día</option><option value="2">2 al día</option><option value="3">3 al día</option></select></div>
           <div class="field"><label for="e-entmin">Duración de cada entrenamiento</label><div class="uin"><input id="e-entmin" inputmode="numeric" placeholder="90"><span>min</span></div></div>
           <div class="field full"><p class="hint" id="e-enthint" style="margin:0">El plan de mejora se arma para caber en este tiempo.</p></div>
+          <div class="field full"><label for="e-fmax">Fecha máxima: competencia en la que debe estar lista</label><input id="e-fmax" type="date">
+            <p class="hint" id="e-fmaxhint" style="margin:6px 0 0">Opcional. Con esta fecha, el plan se arma hacia atrás para llegar en su mejor forma ese día.</p></div>
         </div>
       </section>
 
@@ -1810,12 +1812,12 @@ function readForm(){
     else if(T.tipo!=='yoyo') t[T.key]=Array.from({length:T.intentos},(_,i)=>v(`in-${T.key}-${i}`));
   }
   return {fecha:v('e-fecha')||todayISO(),temporada:tempId(v('e-temp')),momento:v('e-mom'),
-    peso:v('a-peso'),talla:v('a-talla'),mm:v('a-mm'),alc1:v('a-alc1'),alc2:v('a-alc2'),entDia:v('e-entdia'),entMin:v('e-entmin'),t,notas:$('e-notas').value.trim()};
+    peso:v('a-peso'),talla:v('a-talla'),mm:v('a-mm'),alc1:v('a-alc1'),alc2:v('a-alc2'),entDia:v('e-entdia'),entMin:v('e-entmin'),fechaMax:v('e-fmax'),t,notas:$('e-notas').value.trim()};
 }
 function writeForm(ev,yoyo){
   const set=(id,x)=>{$(id).value=x??''};
   ['peso','talla','mm','alc1','alc2'].forEach(k=>set('a-'+k,ev?ev[k]:''));
-  if(ev){set('e-entdia',ev.entDia||'1');set('e-entmin',ev.entMin||'')}
+  if(ev){set('e-entdia',ev.entDia||'1');set('e-entmin',ev.entMin||'');set('e-fmax',ev.fechaMax||'')}
   const t=(ev&&ev.t)||{};
   for(const T of TESTS){
     if(T.tipo==='rm'){set('in-sentadilla-carga',t.sentadilla&&t.sentadilla.carga);set('in-sentadilla-reps',t.sentadilla&&t.sentadilla.reps)}
@@ -1852,7 +1854,7 @@ function loadEvalForm(force){
     const prev=aid!=='__new'?[...S.evaluaciones.values()].filter(e=>e.atletaId===aid).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''))[0]:null;
     writeForm(null,null);$('e-fecha').value=todayISO();
     if(prev){['talla','alc1','alc2'].forEach(k=>$('a-'+k).value=prev[k]||'')}
-    {const a=aid!=='__new'?S.atletas.get(aid)||{}:{};$('e-entdia').value=String(a.entDia||(prev&&prev.entDia)||'1');$('e-entmin').value=a.entMin||(prev&&prev.entMin)||''}
+    {const a=aid!=='__new'?S.atletas.get(aid)||{}:{};$('e-entdia').value=String(a.entDia||(prev&&prev.entDia)||'1');$('e-entmin').value=a.entMin||(prev&&prev.entMin)||'';$('e-fmax').value=a.fechaMax||(prev&&prev.fechaMax)||''}
     $('evState').textContent=prev?'Evaluación nueva · talla y alcances copiados de la anterior':'Evaluación nueva';$('e-del').hidden=true;
   }
   delConfirm=false;$('e-del').textContent='Borrar esta evaluación';
@@ -1864,6 +1866,7 @@ function evCalc(){
   const yy=parseResult('IR1',$('in-yoyo').value);
   const C=computeEval(ev,a,yy.err||yy.empty?null:yy);
   {const TT=trainTime({entDia:ev.entDia,entMin:ev.entMin});$('e-enthint').textContent=TT?TT.txt+' El plan de mejora se arma para caber en ese tiempo.':'Indique cuántas veces entrena al día y cuántos minutos dura cada entrenamiento: el plan de mejora se arma para caber en ese tiempo.'}
+  {const W=compWeeks(ev.fechaMax);$('e-fmaxhint').textContent=!ev.fechaMax?'Opcional. Con esta fecha, el plan se arma hacia atrás para llegar en su mejor forma ese día.':W.dias<0?'Esa fecha ya pasó: elija la próxima competencia.':`Faltan ${W.dias} días (${W.n} semana${W.n>1?'s':''} de plan) hasta el ${fdate(ev.fechaMax)}.`+(W.n<3?' Es poco tiempo: el plan se limita a afinar y llegar descansada.':W.recortado?' El plan cubre las últimas 24 semanas antes de la competencia.':'')}
   $('anthroCalc').innerHTML=`<div><b>${C.edad!==null?C.edad+' años':'—'}</b><span>Edad</span></div>
     <div><b>${C.imc?C.imc.toFixed(1):'—'}</b><span>IMC kg/m²</span></div>
     <div><b>${C.imm?C.imm.toFixed(1):'—'}</b><span>IMM kg/m²</span></div>
@@ -1900,7 +1903,7 @@ $('evf').onsubmit=async e=>{
     if(aid==='__new'){const ex=findAthleteByName(a.nombre);aid=ex||newId();}
     const prevA=S.atletas.get(aid)||{};
     const atl={...prevA,nombre:a.nombre||prevA.nombre,sexo:a.sexo,posicion:a.posicion,nac:a.nac,categoria:a.categoria,creado:prevA.creado||Date.now()};
-    {const f=readForm();if(Number(f.entMin)>0){atl.entDia=Number(f.entDia)||1;atl.entMin=Number(f.entMin)}}
+    {const f=readForm();if(Number(f.entMin)>0){atl.entDia=Number(f.entDia)||1;atl.entMin=Number(f.entMin)}if(f.fechaMax)atl.fechaMax=f.fechaMax;else delete atl.fechaMax}
     if(JSON.stringify(atl)!==JSON.stringify(prevA)) await put('atletas',aid,atl);
     const ev={...readForm(),atletaId:aid};
     const id=evalId(aid,ev.temporada,ev.momento);
@@ -2298,7 +2301,7 @@ function renderAthletes(){
         ${fichaTable(a,F)}
         ${nev?`<details class="sub" data-sub="${a.id}-lvl" ${openSub.has(a.id+'-lvl')?'open':''}><summary>${icon("evolution","ic-sm")} Nivel físico y recomendaciones</summary>${openSub.has(a.id+'-lvl')?levelHTML(a.id):''}</details>
         <details class="sub" data-sub="${a.id}-plan" ${openSub.has(a.id+'-plan')?'open':''}><summary>${icon("plan","ic-sm")} Plan personalizado de mejora</summary>
-          <div class="row"><label class="lbl" for="ps-${a.id}">Duración</label><select id="ps-${a.id}" data-plan="planSem" style="width:auto">${[6,8,10].map(v=>`<option value="${v}" ${(a.planSem||8)==v?'selected':''}>${v} semanas</option>`).join('')}</select>
+          <div class="row">${a.fechaMax&&compWeeks(a.fechaMax).dias>=0?`<span class="lbl">Hasta la competencia del ${fdate(a.fechaMax)}</span>`:`<label class="lbl" for="ps-${a.id}">Duración</label><select id="ps-${a.id}" data-plan="planSem" style="width:auto">${[6,8,10].map(v=>`<option value="${v}" ${(a.planSem||8)==v?'selected':''}>${v} semanas</option>`).join('')}</select>`}
           <label class="lbl" for="pf-${a.id}">Sesiones por semana</label><select id="pf-${a.id}" data-plan="planSes" style="width:auto">${[2,3,4].map(v=>`<option value="${v}" ${(a.planSes||3)==v?'selected':''}>${v}</option>`).join('')}</select></div>
           ${openSub.has(a.id+'-plan')?(()=>{const L=athleteLevel(a.id,fTemp);return L.sexo&&L.has?planHTML(buildPlan(L,a.planSem||8,a.planSes||3),L):'<p class="empty">Indique la rama y registre una evaluación para generar el plan.</p>'})():''}
         </details>`:''}
@@ -2558,6 +2561,60 @@ function fitSession(s,fis,warm){
   s.blocks=s.blocks.filter(b=>b.ex.length);
   s.min=total;
 }
+/* ---------- Periodización hacia la fecha máxima ---------- */
+const DAY=864e5;
+const isoD=d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+function compWeeks(fmax){
+  if(!fmax) return {n:0,dias:0};
+  const hoy=new Date(todayISO()+'T00:00:00'),comp=new Date(fmax+'T00:00:00');
+  const dias=Math.round((comp-hoy)/DAY);
+  let n=Math.max(1,Math.floor(dias/7)+(dias%7>=4?1:0)),recortado=false; // una semana corta al inicio se suma a la primeraif(n>24){n=24;recortado=true}
+  return {n,dias,comp,hoy,recortado};
+}
+/* Fases: [semana inicial, semana final, nombre, índice de columna 0-3] */
+function makePhases(N,comp){
+  if(!comp){const P={6:[1,3,1,1],8:[2,4,1,1],10:[2,5,2,1]}[N]||[2,4,1,1];return phasesFrom(P,comp)}
+  const taper=N>=8?2:1;
+  let intens=N>=3?Math.max(1,Math.round(N*0.2)):(N===2?1:0);
+  let adapt=N>=6?Math.max(1,Math.round(N*0.15)):(N>=4?1:0);
+  let des=N-taper-intens-adapt;if(des<0){intens+=des;des=0}
+  return phasesFrom([adapt,des,intens,taper],comp);
+}
+function phasesFrom(len,comp){
+  const names=['Adaptación','Desarrollo','Intensificación',comp?'Puesta a punto':'Descarga y re-evaluación'];
+  const out=[];let w=1;len.forEach((n,i)=>{if(n>0){out.push([w,w+n-1,names[i],i]);w+=n}});return out;
+}
+const PH_DESC=['Técnica y volumen moderado: el cuerpo se adapta a la carga.','Más volumen y carga progresiva; cada 4.ª semana se descarga.','Menos volumen, máxima calidad e intensidad, parecida a la competencia.'];
+const PH_DESC3={comp:'Volumen 40 a 50 % menor, se mantiene la intensidad: llega fresca y rápida a la competencia.',sin:'Volumen reducido para llegar frescos a la re-evaluación.'};
+/* Intensidad por fase */
+const INTENS=[
+  {rpe:'5–6',rn:5.5,fz:[0.60,0.65],sal:'Submáximos, técnica de despegue y caída',vel:'Técnica de carrera, salidas al 90 %'},
+  {rpe:'6–7',rn:6.5,fz:[0.70,0.80],sal:'Máximos con pausa completa',vel:'Salidas máximas de 5 y 10 m'},
+  {rpe:'8–9',rn:8.5,fz:[0.80,0.90],sal:'Máximos y reactivos, pocas repeticiones',vel:'Máxima velocidad y reacción a señal'},
+  {rpe:'6–7',rn:6.5,fz:[0.75,0.85],sal:'Pocos saltos máximos, mucha pausa',vel:'Salidas cortas y explosivas, poco volumen'}];
+function weekPlan(phases,N,ses,fis,W,c){
+  const rows=[];let devIdx=0;
+  for(let k=1;k<=N;k++){
+    const ph=phases.find(([a,b])=>k>=a&&k<=b),i=ph[3],pos=k-ph[0],len=ph[1]-ph[0]+1;
+    let f,nota='';
+    if(i===0) f=0.7+0.05*pos;
+    else if(i===1){f=(devIdx%4===3)?0.65:Math.min(1,0.8+0.07*(devIdx%4));if(devIdx%4===3)nota='Semana de descarga';devIdx++}
+    else if(i===2) f=0.85;
+    else f=len===2&&pos===0?0.65:0.5;
+    let sw=ses;
+    const last=k===N&&W&&W.comp;
+    if(last){sw=Math.max(1,ses-1);nota='Semana de la competencia: última sesión intensa 4 a 5 días antes; 48 h antes, solo activación corta'}
+    else if(i===3&&W&&W.comp&&!nota) nota='Bajar volumen, mantener la intensidad';
+    const min=Math.max(15,r5(fis*f)),ua=Math.round(sw*min*INTENS[i].rn);
+    let ini=null,fin=null;
+    if(W&&W.comp){fin=new Date(W.comp.getTime()-(N-k)*7*DAY-DAY);ini=k===1?W.hoy:new Date(fin.getTime()-6*DAY)}
+    const YFZ=['Peso corporal, técnica','Carga ligera, 12 a 15 rep.','Carga ligera, con más velocidad','Carga ligera, pocas series'];
+    const kg=c.rm?`${fm(kgR(c.rm*INTENS[i].fz[0]))} a ${fm(kgR(c.rm*INTENS[i].fz[1]))} kg`:'';
+    rows.push({k,fase:ph[2],i,ses:sw,min,vol:Math.round(f*100),rpe:INTENS[i].rpe,fz:c.adult?`${Math.round(INTENS[i].fz[0]*100)}–${Math.round(INTENS[i].fz[1]*100)} % 1RM`+(kg?` (${kg})`:''):YFZ[i],ua,
+      ini:ini?isoD(ini):null,fin:fin?isoD(fin):null,nota});
+  }
+  return rows;
+}
 function buildPlan(L,semanas,sesiones){
   const pr=priorities(L);if(!pr.length)return null;
   let focus=pr.filter(x=>x.lvl<3.5).slice(0,2);
@@ -2589,6 +2646,12 @@ function buildPlan(L,semanas,sesiones){
     if(sesiones>=4) add(`Sesión D · ${nm(f0)} (variante)`,[{k:f0,rol:'principal',t:nm(f0)+' (principal)',ex:prim(f0).slice().reverse()},...others.slice(3).map(k=>({k,rol:'mant',t:nm(k)+' (mantenimiento)',ex:one(k)}))],[prev[1],prev[2]]);
   }
   // quitar ejercicios sin prescripción en todas las fases
+  // Semanas: hasta la fecha máxima, o la duración elegida
+  const W=L.a.fechaMax?compWeeks(L.a.fechaMax):null,comp=W&&W.dias>=0;
+  if(comp) semanas=W.n;
+  const phases=makePhases(semanas,comp);
+  const cols=phases.map(x=>x[3]);
+  sess.forEach(s=>s.blocks.forEach(b=>b.ex=b.ex.map(e=>({...e,p:cols.map(i=>e.p[i])}))));
   sess.forEach(s=>s.blocks.forEach(b=>b.ex=b.ex.filter(e=>e.p.some(x=>x&&x!=='—'))));
   // Ajustar cada sesión al tiempo disponible
   const TT=trainTime(L.a),fis=TT?TT.fis:75,warm=fis>=40?10:5;
@@ -2597,21 +2660,35 @@ function buildPlan(L,semanas,sesiones){
     :'Se aprovecha el calentamiento del entrenamiento técnico; antes del bloque físico, 5 min de activación con banda y 3 aceleraciones progresivas.';
   const tiempoTxt=TT?`${TT.txt} Cada sesión física dura hasta ${fis} min, calentamiento incluido.`
     :'Sesiones físicas de 60 a 75 min además del entrenamiento técnico. Para ajustar el plan al tiempo real, indique en Evaluar cuántos entrenamientos hace al día y cuánto dura cada uno.';
-  return {focus,mantenimiento,phases:PHASES[semanas],semanas,sesiones,sess,metas:metas(L,semanas,fk),c,calent,tiempoTxt,TT};
+  const weeks=weekPlan(phases,semanas,sesiones,fis,comp?W:null,c);
+  const horas=weeks.reduce((x,w)=>x+w.ses*w.min,0)/60;
+  const intIdx=phases.find(x=>x[3]===2),reev=comp?(intIdx?intIdx[1]:Math.max(1,semanas-1)):semanas;
+  const compTxt=comp?`Competencia el ${fdate(L.a.fechaMax)}: faltan ${W.dias} días. El plan tiene ${semanas} semana${semanas>1?'s':''}, termina con la puesta a punto y suma unas ${fm(Math.round(horas))} h de trabajo físico.`+(W.recortado?' Faltan más de 24 semanas: el plan cubre las últimas 24; antes de eso, siga un plan de 8 semanas y re-evalúe.':'')+(semanas<3?' Con tan poco tiempo no se busca mejorar las marcas, sino llegar descansada y rápida.':'')
+    :(W&&W.dias<0?'La fecha máxima registrada ya pasó: indique la próxima competencia en Evaluar.':'');
+  return {focus,mantenimiento,phases,semanas,sesiones,sess,metas:metas(L,Math.min(semanas,12),fk),c,calent,tiempoTxt,TT,weeks,horas,comp,compTxt,reev,fechaMax:comp?L.a.fechaMax:null};
 }
 function phaseHead(ph){return ph.map(([a,b,n])=>`${n}<br><span>Sem ${a===b?a:a+'–'+b}</span>`)}
+const phDesc=(P,i)=>i<3?PH_DESC[i]:(P.comp?PH_DESC3.comp:PH_DESC3.sin);
+function weeksHTML(P){
+  return `<div><h4>Carga e intensidad semana a semana</h4><div class="tbl"><table><thead><tr><th>Sem</th>${P.comp?'<th>Fechas</th>':''}<th>Fase</th><th class="num">Sesiones</th><th class="num">Min por sesión</th><th class="num">Volumen</th><th class="num">Esfuerzo (RPE)</th><th>Fuerza</th><th class="num">Carga (UA)</th></tr></thead><tbody>${
+    P.weeks.map(w=>`<tr><td>${w.k}</td>${P.comp?`<td>${fdate(w.ini).slice(0,5)} al ${fdate(w.fin).slice(0,5)}</td>`:''}<td>${esc(w.fase)}${w.nota?`<br><span class="hint">${esc(w.nota)}</span>`:''}</td><td class="num">${w.ses}</td><td class="num">${w.min}</td><td class="num">${w.vol} %</td><td class="num">${w.rpe}</td><td>${esc(w.fz)}</td><td class="num">${fm(w.ua)}</td></tr>`).join('')}
+    ${P.comp?`<tr class="grp"><td colspan="9">${fdate(P.fechaMax)} · Competencia: llegar en la mejor forma</td></tr>`:''}</tbody></table></div>
+    <p class="hint">Carga (UA) = sesiones × minutos × esfuerzo percibido (RPE de 1 a 10). Volumen: % del tiempo físico disponible. Saltos y velocidad por fase: ${P.phases.map(x=>`${x[2]}: ${INTENS[x[3]].sal.toLowerCase()}; ${INTENS[x[3]].vel.toLowerCase()}`).join(' · ')}.</p></div>`;
+}
 function planHTML(P,L){
   if(!P) return '<p class="empty">Registre al menos una evaluación con la rama del atleta para generar el plan.</p>';
   const fmtM=(T,v)=>T.key==='yoyo'?`${fm(v)} m`:fmtTest(T,v);
   return `<div class="planwrap">
     <p><b>Foco:</b> ${P.focus.map(x=>`<span class="chip ${lvlClass(x.lvl)}">${x.nombre}</span>`).join(' ')} ${P.mantenimiento?'<span class="hint">Todas las capacidades están en nivel bueno o excelente: el plan es de puesta a punto.</span>':''}</p>
-    <p class="hint">${P.semanas} semanas · ${P.sesiones} sesiones físicas por semana. ${esc(P.tiempoTxt)} Re-evaluar en la semana ${P.semanas} o ${P.semanas+1} con la ficha.</p>
-    <div class="cal">${P.phases.map(([a,b,n],i)=>`<div><b>${n}</b><span>Semana${a===b?' '+a:'s '+a+' a '+b}. ${['Técnica y volumen moderado.','Más volumen y carga progresiva.','Menos volumen, máxima calidad e intensidad.','Volumen reducido para llegar frescos a la re-evaluación.'][i]}</span></div>`).join('')}</div>
+    ${P.compTxt?`<p class="banner blue">${esc(P.compTxt)}</p>`:''}
+    <p class="hint">${P.semanas} semanas · ${P.sesiones} sesiones físicas por semana. ${esc(P.tiempoTxt)} ${P.comp?`Re-evaluar al final de la semana ${P.reev}, antes de la puesta a punto.`:`Re-evaluar en la semana ${P.semanas} o ${P.semanas+1} con la ficha.`}</p>
+    <div class="cal">${P.phases.map(([a,b,n,i])=>`<div><b>${n}</b><span>Semana${a===b?' '+a:'s '+a+' a '+b}. ${phDesc(P,i)}</span></div>`).join('')}</div>
+    ${weeksHTML(P)}
     <div><h4>Metas para la próxima evaluación</h4><div class="tbl"><table><thead><tr><th>Prueba</th><th class="num">Actual</th><th class="num">Meta</th><th></th></tr></thead><tbody>${
       P.metas.map(m=>`<tr><td>${m.T.n}. ${m.T.nombre}</td><td class="num">${fmtM(m.T,m.actual)}</td><td class="num"><b>${fmtM(m.T,m.meta)}</b></td><td>${m.foco?'<span class="chip c2">Foco</span>':''}</td></tr>`).join('')}</tbody></table></div></div>
     <p><b>Calentamiento en todas las sesiones:</b> ${P.calent}</p>
     ${P.sess.map(s=>`<div class="sess"><h4>${esc(s.nombre)}</h4><div class="tbl"><table><thead><tr><th>Ejercicio</th>${phaseHead(P.phases).map(h=>`<th class="num">${h}</th>`).join('')}</tr></thead><tbody>${
-      s.blocks.map(b=>`<tr class="grp"><td colspan="5">${esc(b.t)}</td></tr>`+b.ex.map(e=>`<tr><td>${esc(e.n)}${e.nota?`<br><span class="hint">${esc(e.nota)}</span>`:''}</td>${e.p.map(x=>`<td class="num">${esc(x||'—')}</td>`).join('')}</tr>`).join('')).join('')}</tbody></table></div></div>`).join('')}
+      s.blocks.map(b=>`<tr class="grp"><td colspan="${P.phases.length+1}">${esc(b.t)}</td></tr>`+b.ex.map(e=>`<tr><td>${esc(e.n)}${e.nota?`<br><span class="hint">${esc(e.nota)}</span>`:''}</td>${e.p.map(x=>`<td class="num">${esc(x||'—')}</td>`).join('')}</tr>`).join('')).join('')}</tbody></table></div></div>`).join('')}
     <p class="hint">Series × repeticiones. Descanso de 2 a 3 min en fuerza y saltos, completo en velocidad. Si aparece dolor, se detiene el ejercicio. El plan es una guía: la entrenadora ajusta según el calendario de partidos.</p>
   </div>`;
 }
@@ -3147,6 +3224,7 @@ function informePDF(aid){
           ['Categoría / Edad',pdfSafe([a.categoria,L.edad!==null?L.edad+' años':null].filter(Boolean).join(' / ')||'—'),'Rama',a.sexo==='F'?'Femenina':'Masculina'],
           ['Última evaluación',L.lastFecha?fdate(L.lastFecha):'—','Nivel general',`${lvlName(L.general)} (${L.general.toFixed(1)} de 5)`],
           ['Entrenamientos',{content:a.entMin?`${a.entDia||1} al día, de ${fm(a.entMin)} min cada uno`:'Sin indicar',colSpan:3}],
+          ['Fecha máxima',{content:a.fechaMax?`${fdate(a.fechaMax)} (competencia)`:'Sin indicar',colSpan:3}],
           ['Elaborado por',{content:pdfSafe(evFull()||'—'),colSpan:3}]]});
   y=doc.lastAutoTable.finalY+4;
   pdfRadar(doc,L,showBase?base:null,58,y+38,28);
@@ -3164,24 +3242,32 @@ function informePDF(aid){
     y=paragraph(doc,`${x.nombre} - ${band==='alta'?'Prioridad alta':band==='media'?'Prioridad media':'Mantener'}: ${REC[x.key][band]}`,y,{size:9})});
   if(P){
     y+=2;y=needSpace(doc,y,30);
-    doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...COL.court);doc.text(`Metas para la próxima evaluación (${P.semanas} semanas)`,12,y);y+=2;
+    doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...COL.court);doc.text(P.comp?`Metas para la competencia del ${fdate(P.fechaMax)}`:`Metas para la próxima evaluación (${P.semanas} semanas)`,12,y);y+=2;
     const fmtM=(T,v)=>pdfSafe(T.key==='yoyo'?`${fm(v)} m`:fmtTest(T,v));
     doc.autoTable({startY:y,head:[['Prueba','Actual','Meta','']],body:P.metas.map(m=>[`${m.T.n}. ${m.T.nombre}`,fmtM(m.T,m.actual),fmtM(m.T,m.meta),m.foco?'Foco':'']),
       theme:'grid',headStyles:{fillColor:COL.ink,textColor:255,fontSize:8.5},styles:{fontSize:8.3,cellPadding:1.1,lineColor:COL.line,lineWidth:0.2,textColor:COL.ink},
       columnStyles:{1:{halign:'right'},2:{halign:'right',fontStyle:'bold'},3:{textColor:COL.zone,fontStyle:'bold',cellWidth:16}}});
     // Plan
     doc.addPage();y=pdfHeader(doc,'PLAN PERSONALIZADO DE MEJORA',`${pdfSafe(a.nombre)} · ${P.semanas} semanas · ${P.sesiones} sesiones por semana`);
-    y=paragraph(doc,`Foco: ${P.focus.map(x=>x.nombre).join(' y ')}.${P.mantenimiento?' Todas las capacidades están en nivel bueno o excelente: plan de puesta a punto.':''} ${P.tiempoTxt} Re-evaluar en la semana ${P.semanas} o ${P.semanas+1}.`,y,{size:9.5});
+    y=paragraph(doc,`Foco: ${P.focus.map(x=>x.nombre).join(' y ')}.${P.mantenimiento?' Todas las capacidades están en nivel bueno o excelente: plan de puesta a punto.':''} ${P.compTxt?P.compTxt+' ':''}${P.tiempoTxt} ${P.comp?`Re-evaluar al final de la semana ${P.reev}, antes de la puesta a punto.`:`Re-evaluar en la semana ${P.semanas} o ${P.semanas+1}.`}`,y,{size:9.5});
     doc.autoTable({startY:y,head:[P.phases.map(([a,b,n])=>`${n}\nSemana${a===b?' '+a:'s '+a+'-'+b}`)],
-      body:[['Técnica y volumen moderado','Más volumen y carga progresiva','Menos volumen, máxima intensidad','Volumen reducido para re-evaluar']],
+      body:[P.phases.map(x=>pdfSafe(phDesc(P,x[3])))],
       theme:'grid',headStyles:{fillColor:COL.court,textColor:255,fontSize:8.5,halign:'center'},styles:{fontSize:8.2,halign:'center',lineColor:COL.line,lineWidth:0.2,textColor:COL.ink}});
     y=doc.lastAutoTable.finalY+3;
+    y=needSpace(doc,y,20);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...COL.court);doc.text('Carga e intensidad semana a semana',12,y);y+=1.5;
+    doc.autoTable({startY:y,head:[['Sem',...(P.comp?['Fechas']:[]),'Fase','Ses.','Min/ses.','Vol.','RPE','Fuerza','Carga UA']],
+      body:[...P.weeks.map(w=>[w.k,...(P.comp?[`${fdate(w.ini).slice(0,5)} al ${fdate(w.fin).slice(0,5)}`]:[]),pdfSafe(w.fase)+(w.nota?'\n'+pdfSafe(w.nota):''),w.ses,w.min,w.vol+' %',pdfSafe(w.rpe),pdfSafe(w.fz),fm(w.ua)]),
+        ...(P.comp?[[{content:`${fdate(P.fechaMax)} - COMPETENCIA: llegar en la mejor forma`,colSpan:9,styles:{fillColor:COL.soft,textColor:COL.court,fontStyle:'bold'}}]]:[])],
+      theme:'grid',headStyles:{fillColor:COL.ink,textColor:255,fontSize:7.8},styles:{fontSize:7.5,cellPadding:1,lineColor:COL.line,lineWidth:0.2,textColor:COL.ink,valign:'middle'},
+      columnStyles:P.comp?{0:{halign:'center',cellWidth:9},2:{cellWidth:44},3:{halign:'center'},4:{halign:'center'},5:{halign:'center'},6:{halign:'center'},8:{halign:'right'}}:{0:{halign:'center',cellWidth:9},1:{cellWidth:50},2:{halign:'center'},3:{halign:'center'},4:{halign:'center'},5:{halign:'center'},7:{halign:'right'}}});
+    y=doc.lastAutoTable.finalY+2;
+    y=paragraph(doc,'Carga (UA) = sesiones x minutos x esfuerzo percibido (RPE de 1 a 10). Volumen: % del tiempo físico disponible.',y,{size:8,color:COL.muted});
     y=paragraph(doc,'Calentamiento en todas las sesiones: '+P.calent,y,{size:9});
     for(const s of P.sess){
       y=needSpace(doc,y,30);
       doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...COL.court);doc.text(pdfSafe(s.nombre),12,y);y+=1.5;
       const body=[],grpRows=new Set();
-      s.blocks.forEach(b=>{grpRows.add(body.length);body.push([{content:pdfSafe(b.t).toUpperCase(),colSpan:5}]);b.ex.forEach(e=>body.push([pdfSafe(e.n)+(e.nota?'\n'+pdfSafe(e.nota):''),...e.p.map(x=>pdfSafe(x||'-'))]))});
+      s.blocks.forEach(b=>{grpRows.add(body.length);body.push([{content:pdfSafe(b.t).toUpperCase(),colSpan:P.phases.length+1}]);b.ex.forEach(e=>body.push([pdfSafe(e.n)+(e.nota?'\n'+pdfSafe(e.nota):''),...e.p.map(x=>pdfSafe(x||'-'))]))});
       doc.autoTable({startY:y,head:[['Ejercicio',...P.phases.map(([a,b,n])=>`${n}\nSem ${a===b?a:a+'-'+b}`)]],body,theme:'grid',
         headStyles:{fillColor:COL.ink,textColor:255,fontSize:7.8,halign:'center'},styles:{fontSize:7.8,cellPadding:1.1,lineColor:COL.line,lineWidth:0.2,textColor:COL.ink,valign:'middle'},
         columnStyles:{0:{cellWidth:66},1:{halign:'center'},2:{halign:'center'},3:{halign:'center'},4:{halign:'center'}},
