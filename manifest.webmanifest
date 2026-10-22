@@ -1,7 +1,7 @@
 {
   "name": "Evaluación Física Voleibol",
   "short_name": "Evaluación VB",
-  "description": "Ficha de evaluación física de voleibol de la entrenadora Patricia Castro Bondy.",
+  "description": "Ficha de evaluación física de voleibol con nivel físico y plan de mejora por atleta.",
   "lang": "es",
   "start_url": "./",
   "scope": "./",

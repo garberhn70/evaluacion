@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Evaluación Voleibol">
-<meta name="author" content="Patricia Castro Bondy">
+<meta name="author" content="Evaluación Física Voleibol">
 <title>Evaluación Física Voleibol</title>
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font-family:system-ui,sans-serif;font-size:14px}img{max-width:100%}</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -917,12 +917,27 @@ button,select,input,summary{touch-action:manipulation;-webkit-tap-highlight-colo
   </section>
 
   <footer class="sig">
-    <b>Patricia Castro Bondy</b>
-    <span>Entrenadora</span>
+    <b id="sigName">Evaluación Física Voleibol</b>
+    <span id="sigRole"></span>
     <p class="hint" id="sigEval" style="margin-top:6px"></p>
   </footer>
 </div>
-<div id="evalGate" hidden><form id="gateForm"><input id="g-nombre"><input id="g-apellido"><select id="g-cargo"><option>Entrenadora</option></select><p id="gateErr"></p><button id="gateGo"></button><button type="button" id="gateCancel"></button></form></div>
+<div class="gate" id="evalGate" role="dialog" aria-modal="true" aria-labelledby="gateTitle" hidden>
+  <form class="gate-card" id="gateForm" autocomplete="on">
+    <span class="ico" style="width:52px;height:52px;border-radius:14px;background:var(--court);color:var(--on-accent)"><svg class="ic" style="width:28px;height:28px" aria-hidden="true"><use href="#i-team"/></svg></span>
+    <p class="eyebrow">Antes de empezar</p>
+    <h2 id="gateTitle">¿Quién realiza la evaluación?</h2>
+    <p class="hint">Se pide una sola vez en este equipo. Su nombre aparecerá en el pie de la página, en cada evaluación, en las fichas, en los informes PDF y en los archivos que descargue. Puede cambiarlo cuando quiera desde el botón «Evalúa» de arriba.</p>
+    <div class="grid">
+      <div class="field"><label for="g-nombre">Nombre</label><input id="g-nombre" autocomplete="given-name" placeholder="Nombre" required></div>
+      <div class="field"><label for="g-apellido">Apellido</label><input id="g-apellido" autocomplete="family-name" placeholder="Apellido" required></div>
+      <div class="field full"><label for="g-cargo">Cargo</label>
+        <select id="g-cargo"><option>Entrenador</option><option>Entrenadora</option><option>Preparador físico</option><option>Preparadora física</option><option>Profesor</option><option>Profesora</option><option>Asistente técnico</option><option>Fisioterapeuta</option></select></div>
+    </div>
+    <p class="toast err" id="gateErr"></p>
+    <div class="row"><button class="btn primary" type="submit" id="gateGo">Continuar</button><button type="button" class="link" id="gateCancel" hidden>Cancelar</button></div>
+  </form>
+</div>
 <div class="gate" id="offer" role="dialog" aria-modal="true" aria-labelledby="ofTitle" hidden>
   <div class="gate-card">
     <p class="eyebrow">Archivo generado</p>
@@ -1927,12 +1942,15 @@ $('evf').onsubmit=async e=>{
 /* =========================================================
    Evaluador: quien toma la prueba
    ========================================================= */
-/* La entrenadora responsable es fija: no se pide ningún dato al abrir */
-const EVALUADOR={nombre:'Patricia',apellido:'Castro Bondy',cargo:'Entrenadora'};
+/* Se pide una sola vez por equipo; también viaja en los respaldos */
+let EVALUADOR=local.get('yoyo-evaluador',null);
+if(EVALUADOR&&EVALUADOR.nombre==='Patricia'&&EVALUADOR.apellido==='Castro Bondy')EVALUADOR=null;
 const evName=()=>EVALUADOR?`${EVALUADOR.nombre} ${EVALUADOR.apellido}`.trim():'';
 const evFull=()=>EVALUADOR?`${evName()} (${EVALUADOR.cargo})`:'';
 function renderEvaluador(){
   $('evChip').textContent=EVALUADOR?`Evalúa: ${evName()} · Cambiar`:'Indicar quién evalúa';
+  $('sigName').textContent=EVALUADOR?evName():'Evaluación Física Voleibol';
+  $('sigRole').textContent=EVALUADOR?EVALUADOR.cargo:'';
   $('sigEval').textContent='';
 }
 function openGate(change){
@@ -1947,7 +1965,8 @@ $('gateForm').onsubmit=e=>{e.preventDefault();
   $('evalGate').hidden=true;renderEvaluador();scheduleRender();};
 $('gateCancel').onclick=()=>{$('evalGate').hidden=true};
 $('evChip').onclick=()=>openGate(true);
-$('evChip').hidden=true;$('evalGate').hidden=true;
+$('evChip').hidden=false;
+renderEvaluador();if(!EVALUADOR)openGate(false);
 
 /* =========================================================
    Pruebas de la sesión, evaluaciones en curso y respaldo
@@ -2042,7 +2061,7 @@ async function saveFile(name,data,mime){
   a.href=url;a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);a.remove()},1500);
 }
 function backupData(){
-  const o={app:'evaluacion-fisica-voleibol',version:2,fecha:new Date().toISOString(),thr:THR,niv:NIV};
+  const o={app:'evaluacion-fisica-voleibol',version:2,fecha:new Date().toISOString(),thr:THR,niv:NIV,evaluador:EVALUADOR||undefined};
   COLS.forEach(c=>o[c]=Object.fromEntries(S[c]));return o;
 }
 function renderBackupNote(){const d=local.get('yoyo-last-backup',null);$('backupNote').textContent=d?`Último respaldo: ${fdate(d)}`:'Sin respaldos descargados'}
@@ -2102,6 +2121,7 @@ async function applyRestore(replace){
       }
     }
     if(o.thr)THR=o.thr;if(o.niv)NIV=o.niv;await saveThr();
+    if(!EVALUADOR&&o.evaluador&&o.evaluador.nombre&&o.evaluador.nombre!=='Patricia'){EVALUADOR=o.evaluador;local.set('yoyo-evaluador',EVALUADOR);$('evalGate').hidden=true;renderEvaluador()}
     loadedKey=null;scheduleRender();toast('btoast',replace?'Datos reemplazados con el respaldo.':'Respaldo combinado con los datos actuales.');
   }catch(err){toast('btoast',`Se cargaron ${n} de ${total} registros. Revise la conexión y vuelva a cargar el archivo.`,true)}
 }
@@ -3025,13 +3045,13 @@ async function ofShareNow(viaMail){
   const can=navigator.canShare&&(()=>{try{return navigator.canShare({files:[o.file]})}catch(e){return false}})();
   if(viaMail&&to){try{await navigator.clipboard.writeText(to)}catch(e){}}
   if(can){
-    try{await navigator.share({files:[o.file],title:o.name,text:viaMail?`${o.name} · Evaluación Física Voleibol · Patricia Castro Bondy, Entrenadora`:undefined});
+    try{await navigator.share({files:[o.file],title:o.name,text:viaMail?`${o.name} · Evaluación Física Voleibol`+(EVALUADOR?` · ${evName()}, ${EVALUADOR.cargo}`:''):undefined});
       $('ofMsg').textContent=viaMail?'Listo. Si eligió Mail, el archivo va adjunto.':'Listo.';return}
     catch(e){if(e&&e.name==='AbortError'){$('ofMsg').textContent='Cancelado.';return}}
   }
   // Computadora o navegador sin menú Compartir
   const a=document.createElement('a');a.href=o.url;a.download=o.name;document.body.appendChild(a);a.click();a.remove();
-  if(viaMail){location.href=`mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(o.name+' - Evaluación Física Voleibol')}&body=${encodeURIComponent('Adjunto el archivo '+o.name+' (descargado en este equipo).\n\nPatricia Castro Bondy\nEntrenadora')}`;
+  if(viaMail){location.href=`mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(o.name+' - Evaluación Física Voleibol')}&body=${encodeURIComponent('Adjunto el archivo '+o.name+' (descargado en este equipo).'+(EVALUADOR?'\n\n'+evName()+'\n'+EVALUADOR.cargo:''))}`;
     $('ofMsg').textContent='El archivo se descargó. En el correo que se abrió, adjúntelo desde Descargas.';}
   else $('ofMsg').textContent='Archivo descargado.';
 }
@@ -3077,8 +3097,8 @@ function pdfFooters(doc){
   for(let i=1;i<=n;i++){
     doc.setPage(i);
     doc.setDrawColor(...COL.court);doc.setLineWidth(0.5);doc.line(12,H-17,W-12,H-17);
-    doc.setTextColor(...COL.ink);doc.setFont('helvetica','bold');doc.setFontSize(10.5);doc.text('Patricia Castro Bondy',12,H-11);
-    doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...COL.zone);doc.text('ENTRENADORA',12,H-7);
+    doc.setTextColor(...COL.ink);doc.setFont('helvetica','bold');doc.setFontSize(10.5);doc.text(pdfSafe(EVALUADOR?evName():'Evaluación Física Voleibol'),12,H-11);
+    doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...COL.zone);doc.text(pdfSafe(EVALUADOR?EVALUADOR.cargo:'').toUpperCase(),12,H-7);
     doc.setTextColor(...COL.muted);doc.text(`Generado el ${fdate(todayISO())} · Página ${i} de ${n}`,W-12,H-9,{align:'right'});
 
   }
@@ -3138,7 +3158,7 @@ function fichaPage(doc,aid,temp){
   doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...COL.court);doc.text('Notas / comentarios del entrenador',12,y);
   // Firma a la derecha, a la altura de las notas
   doc.setDrawColor(...COL.ink);doc.setLineWidth(0.4);doc.line(W-76,y+16,W-12,y+16);
-  doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...COL.muted);doc.text('Patricia Castro Bondy · Entrenadora',W-44,y+20,{align:'center'});
+  doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...COL.muted);doc.text(pdfSafe(EVALUADOR?`${evName()} · ${EVALUADOR.cargo}`:'Firma de quien evalúa'),W-44,y+20,{align:'center'});
   y+=5;
   if(notas.length){doc.setFontSize(9);doc.setTextColor(...COL.ink);
     notas.forEach(([m,l])=>{const lines=doc.splitTextToSize(pdfSafe(`${l}: ${F[m].ev.notas}`),W-100);y=needSpace(doc,y,lines.length*4.4);doc.text(lines,12,y);y+=lines.length*4.4+1})}
