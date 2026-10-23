@@ -3495,18 +3495,9 @@ if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostn
 <script>
 window.vbInitStore().catch(function(err){
   console.error('Error al iniciar el almacenamiento:',err);
-  try {
-    if (window.S && S.mode === 'loading') {
-      S.mode='local';
-      loadLocal();
-      checkStorageRisk();
-      $('storeNote').textContent='No se pudo conectar a la nube. Los cambios nuevos no se sincronizarán.';
-      scheduleRender();
-    }
-    if (window.vbShowGate) window.vbShowGate(true,'No se pudo completar la conexión con la nube. Compruebe Internet e intente iniciar sesión de nuevo.');
-  } catch (fallbackError) {
-    console.error('Error al mostrar el modo de recuperación:',fallbackError);
-  }
+  const note=document.getElementById('storeNote');
+  if(note) note.textContent='No se pudo completar la conexión con la nube.';
+  if(window.vbShowGate) window.vbShowGate(true,'No se pudo completar la conexión con la nube. Compruebe Internet e intente iniciar sesión de nuevo. No cierre esta página si tiene cambios sin respaldar.');
 });
 </script>
 </body>
