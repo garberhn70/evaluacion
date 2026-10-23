@@ -36,3 +36,8 @@ Por cada prueba manual, anotar fecha, versión/commit, pasos, resultado esperado
 - No introducir claves `service_role` en HTML/JavaScript del navegador.
 - No hacer pruebas destructivas con datos reales.
 - No fusionar ni publicar hasta revisar todos los fallos críticos.
+
+
+## Ejecutar una versión local de pruebas
+
+Consulta `PRUEBAS-LOCALES.md`. En Windows, descarga el ZIP de la rama de pruebas, extrae los archivos y ejecuta `iniciar-pruebas.bat`. Esto inicia un servidor local sin modificar la publicación de producción. Usa exclusivamente una cuenta/licencia de prueba y datos ficticios.
