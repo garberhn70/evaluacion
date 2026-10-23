@@ -541,7 +541,7 @@ button,select,input,summary{touch-action:manipulation;-webkit-tap-highlight-colo
     <div class="hero-txt">
       <p class="eyebrow">Rendimiento · Disciplina · Precisión</p>
       <h1>Evaluación Física <span>Voleibol</span></h1>
-      <p class="sub">Ficha de 10 pruebas para pretemporada, mitad y fin de temporada, con nivel físico y plan de mejora por atleta.</p>
+      <p class="sub">Ficha de 12 pruebas para pretemporada, mitad y fin de temporada, con nivel físico y plan de mejora por atleta.</p>
       <div class="meta">
         <button type="button" class="hint evchip" id="evChip" title="Cambiar quién evalúa"></button>
         <p class="hint" id="storeNote">Datos guardados en este dispositivo</p>
@@ -586,7 +586,7 @@ button,select,input,summary{touch-action:manipulation;-webkit-tap-highlight-colo
 
   <!-- ===================== EVALUAR ===================== -->
   <section class="view" id="v-evaluar">
-    <div class="view-h"><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-eval"/></svg></span><div class="t"><p class="eyebrow">Evaluar</p><h2>Ficha de evaluación física</h2><p class="s">Datos de la atleta, antropometría y las 10 pruebas, con cálculos al instante.</p></div></div>
+    <div class="view-h"><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-eval"/></svg></span><div class="t"><p class="eyebrow">Evaluar</p><h2>Ficha de evaluación física</h2><p class="s">Datos de la atleta, antropometría y las 12 pruebas, con cálculos al instante.</p></div></div>
     <section class="panel" id="pendPanel" hidden>
       <div class="panel-h"><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-evolution"/></svg></span><h2>Evaluaciones en curso</h2><p>Pruebas que faltan por registrar</p></div>
       <div class="pend" id="pendList"></div>
@@ -761,7 +761,10 @@ button,select,input,summary{touch-action:manipulation;-webkit-tap-highlight-colo
 
     <details class="box">
       <summary>Referencias de nivel físico</summary>
-      <p class="hint">Valor desde el cual cada prueba cuenta como Bajo, Medio, Bueno o Excelente; por debajo de Bajo es Muy bajo. En sprints y T-Test es el tiempo máximo. La sentadilla se mide como 1RM dividido entre el peso corporal. Son referencias orientativas para voleibol juvenil y mayor: ajústelas a la categoría de su equipo, sobre todo en menores de 16 años.</p>
+      <p class="hint">Valor desde el cual cada prueba cuenta como Bajo, Medio, Bueno o Excelente; por debajo de Bajo es Muy bajo. En sprints y T-Test es el tiempo máximo. Las cuatro pruebas con norma internacional usan la tabla de la edad del atleta (Bajo = percentil 25, Medio = 50, Bueno = 75, Excelente = 95). Si desmarca una norma, esa prueba vuelve a la referencia interna.</p>
+      <div id="normTable"></div>
+      <h4>Referencias internas del equipo</h4>
+      <p class="hint">Se usan en las pruebas sin norma internacional (salto de bloqueo y de ataque, sprint de 5 m, sentadilla, balón medicinal, plancha, Yo-Yo y burpees), cuando falta la fecha de nacimiento o cuando la edad queda fuera de la norma. La sentadilla se mide como 1RM dividido entre el peso corporal. Ajústelas a la categoría de su equipo.</p>
       <div id="nivTable"></div>
       <div class="row"><button class="btn sm blue" id="saveNiv">Guardar referencias</button><button class="link" id="resetNiv">Volver a los valores de referencia</button></div>
       <p class="toast" id="ntoast"></p>
@@ -1418,34 +1421,37 @@ const TESTS=[
  {key:'horizontal',n:3,grupo:'Salto y potencia',nombre:'Salto horizontal',unidad:'cm',mejor:'max',intentos:3,ph:'205',uLabel:'cm',uName:'Centímetros',uHint:'Distancia desde la línea hasta el talón, en cm. Ej.: 205',
   como:'Pies juntos detrás de la línea. Con impulso de brazos, salta hacia adelante a dos pies y cae sin perder el equilibrio ni apoyar las manos. Se mide desde la línea hasta el talón más cercano. 3 intentos con 45 s de pausa.',
   material:'Cinta métrica en el piso.'},
- {key:'s5',n:4,grupo:'Velocidad y agilidad',nombre:'Sprint 5 m',unidad:'s',mejor:'min',intentos:3,dec:2,ph:'1.15',uLabel:'s',uName:'Segundos',uHint:'Tiempo en segundos, con 2 decimales. Ej.: 1.15',
+ {key:'cmj',n:4,grupo:'Salto y potencia',nombre:'Salto vertical CMJ',unidad:'cm',mejor:'max',intentos:3,dec:1,ph:'32.5',uLabel:'cm',uName:'Centímetros',uHint:'Altura del salto en cm, con 1 decimal. Ej.: 32.5',
+  como:'Salto con contramovimiento con las manos en la cintura todo el tiempo. De pie y quieto, baja rápido hasta unos 90° de rodilla y salta lo más alto posible sin pausa; cae con las piernas estiradas y en el mismo lugar. 3 intentos con 30 s de pausa. Se mide la altura con plataforma de contacto, alfombra de salto o app de video (tiempo de vuelo). Es la prueba con normas de voleibolistas por edad.',
+  material:'Plataforma o alfombra de contacto, o un teléfono con app de video para saltos.'},
+ {key:'s5',n:5,grupo:'Velocidad y agilidad',nombre:'Sprint 5 m',unidad:'s',mejor:'min',intentos:3,dec:2,ph:'1.15',uLabel:'s',uName:'Segundos',uHint:'Tiempo en segundos, con 2 decimales. Ej.: 1.15',
   como:'Salida de pie, pie adelantado 50 cm detrás de la línea. El tiempo empieza con el primer movimiento y termina cuando el pecho cruza la línea. 3 intentos con 2 min de pausa. Con cronómetro manual, que mida siempre la misma persona.',
   material:'Fotoceldas o cronómetro, conos, cinta métrica.'},
- {key:'s10',n:5,grupo:'Velocidad y agilidad',nombre:'Sprint 10 m',unidad:'s',mejor:'min',intentos:3,dec:2,ph:'1.98',uLabel:'s',uName:'Segundos',uHint:'Tiempo en segundos, con 2 decimales. Ej.: 1.98',
+ {key:'s10',n:6,grupo:'Velocidad y agilidad',nombre:'Sprint 10 m',unidad:'s',mejor:'min',intentos:3,dec:2,ph:'1.98',uLabel:'s',uName:'Segundos',uHint:'Tiempo en segundos, con 2 decimales. Ej.: 1.98',
   como:'Igual que el sprint de 5 m, con la meta a 10 m. Con fotoceldas, ponga una en 5 m y otra en 10 m y mida las dos en la misma carrera.',
   material:'Fotoceldas o cronómetro, conos.'},
- {key:'ttest',n:6,grupo:'Velocidad y agilidad',nombre:'T-Test de agilidad',unidad:'s',mejor:'min',intentos:2,dec:2,ph:'11.20',uLabel:'s',uName:'Segundos',uHint:'Tiempo en segundos, con 2 decimales. Ej.: 11.20',
+ {key:'ttest',n:7,grupo:'Velocidad y agilidad',nombre:'T-Test de agilidad',unidad:'s',mejor:'min',intentos:2,dec:2,ph:'11.20',uLabel:'s',uName:'Segundos',uHint:'Tiempo en segundos, con 2 decimales. Ej.: 11.20',
   como:'Conos en T: A de salida, B a 9,14 m al frente, C y D a 4,57 m a cada lado de B. Sprint de A a B y toca la base del cono; desplazamiento lateral a C y toca; lateral hasta D y toca; lateral de vuelta a B y toca; carrera de espaldas hasta A. No se cruzan los pies; si no toca un cono, el intento se repite. 2 intentos con 3 min de pausa.',
   material:'4 conos, cronómetro, cinta métrica.'},
- {key:'sentadilla',n:7,grupo:'Fuerza',nombre:'Sentadilla (1RM estimado)',unidad:'kg',mejor:'max',tipo:'rm',
+ {key:'sentadilla',n:8,grupo:'Fuerza',nombre:'Sentadilla (1RM estimado)',unidad:'kg',mejor:'max',tipo:'rm',
   como:'Sentadilla trasera con barra hasta que los muslos queden paralelos al piso. Después del calentamiento, use una carga que permita de 3 a 8 repeticiones con buena técnica y anote la carga y las repeticiones completas. La herramienta estima el 1RM con la fórmula de Brzycki. Solo con atletas que dominan la técnica; en menores de 15 años use una variante sin carga máxima.',
   material:'Barra olímpica, discos, rack con seguros, un ayudante.'},
- {key:'balon',n:8,grupo:'Fuerza',nombre:'Lanzamiento de balón medicinal',unidad:'m',mejor:'max',intentos:3,dec:2,ph:'8.60',uLabel:'m',uName:'Metros',uHint:'Distancia hasta el primer bote, en metros. Ej.: 8.60',tipo:'balon',
+ {key:'balon',n:9,grupo:'Fuerza',nombre:'Lanzamiento de balón medicinal',unidad:'m',mejor:'max',intentos:3,dec:2,ph:'8.60',uLabel:'m',uName:'Metros',uHint:'Distancia hasta el primer bote, en metros. Ej.: 8.60',tipo:'balon',
   como:'De pie, pies detrás de la línea, lanzamiento a dos manos por encima de la cabeza (como un saque de banda) sin despegar los pies. Se mide hasta el primer bote. 3 intentos con 45 s de pausa. Use siempre el mismo peso de balón: 2 kg en rama femenina o juvenil, 3 kg en rama masculina mayor.',
   material:'Balón medicinal de 2 o 3 kg, cinta métrica de 20 m.'},
- {key:'plancha',n:9,grupo:'Fuerza',nombre:'Plancha isométrica',unidad:'s',mejor:'max',intentos:1,ph:'95',uLabel:'s',uName:'Segundos',uHint:'Tiempo sostenido en segundos. Ej.: 95 (1 min 35 s)',
+ {key:'plancha',n:10,grupo:'Fuerza',nombre:'Plancha isométrica',unidad:'s',mejor:'max',intentos:1,ph:'95',uLabel:'s',uName:'Segundos',uHint:'Tiempo sostenido en segundos. Ej.: 95 (1 min 35 s)',
   como:'Apoyo en antebrazos y puntas de pies, cuerpo alineado de hombros a tobillos. Se detiene cuando la cadera cae o sube después de un aviso. 1 intento. Anote los segundos.',
   material:'Cronómetro, colchoneta.'},
- {key:'yoyo',n:10,grupo:'Resistencia',nombre:'Yo-Yo IR1',unidad:'m',mejor:'max',tipo:'yoyo',
+ {key:'yoyo',n:11,grupo:'Resistencia',nombre:'Yo-Yo IR1',unidad:'m',mejor:'max',tipo:'yoyo',
   como:'Prueba Yo-Yo IR1 con el audio o con el cronómetro de la pestaña Yo-Yo. Siempre al final de la sesión. Anote el nivel y la repetición (15.4) o la distancia (920).',
   material:'Conos a 20 m y 5 m, audio o cronómetro de esta página, parlante.'},
- {key:'burpees',n:11,grupo:'Resistencia',nombre:'Burpees en 60 s',unidad:'rep',mejor:'max',intentos:1,ph:'18',uLabel:'rep',uName:'Repeticiones',uHint:'Repeticiones completas en 60 segundos. Ej.: 18',
+ {key:'burpees',n:12,grupo:'Resistencia',nombre:'Burpees en 60 s',unidad:'rep',mejor:'max',intentos:1,ph:'18',uLabel:'rep',uName:'Repeticiones',uHint:'Repeticiones completas en 60 segundos. Ej.: 18',
   como:'De pie: se agacha y apoya las manos en el piso, lanza los pies atrás hasta quedar en plancha, regresa los pies junto a las manos, se pone de pie y salta con los brazos arriba. Se cuentan las repeticiones completas en 60 segundos, sin flexión de pecho. No cuenta la repetición si el cuerpo no queda alineado en la plancha o si no despega los pies en el salto. 1 intento, al final del día 1.',
   material:'Cronómetro, colchoneta o piso firme, una persona que cuente.'}
 ];
 const GROUPS=[['Salto y potencia','Día 1'],['Velocidad y agilidad','Día 1'],['Fuerza','Día 2 (balón medicinal: día 1)'],['Resistencia','Burpees: final del día 1 · Yo-Yo: día 2']];
 const GROUP_IC={'Salto y potencia':'jump','Velocidad y agilidad':'sprint','Fuerza':'strength','Resistencia':'endurance'};
-const TEST_IC={bloqueo:'jump',ataque:'attack',horizontal:'hjump',s5:'sprint',s10:'sprint',ttest:'agility',sentadilla:'strength',balon:'throw',plancha:'core',yoyo:'endurance',burpees:'burpee'};
+const TEST_IC={bloqueo:'jump',ataque:'attack',horizontal:'hjump',cmj:'jump',s5:'sprint',s10:'sprint',ttest:'agility',sentadilla:'strength',balon:'throw',plancha:'core',yoyo:'endurance',burpees:'burpee'};
 const icon=(n,c)=>`<svg class="ic${c?' '+c:''}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
 
 /* =========================================================
@@ -1505,6 +1511,15 @@ const DIAG={
    fig({h:[250,64],n:[250,78],hip:[252,120],lk:[246,148],lf:[242,174],rk:[260,146],rf:[256,172],le:[264,52],lh:[282,30],re:[240,98],rh:[234,114]})+
    tx(170,222,'Carrera de 3 o 4 pasos','blu')+tx(150,190,'Batida a 2 pies')+tx(262,18,'Mano de ataque','hl','end'),
    'Salto de ataque: carrera de aproximación de 3 o 4 pasos, batida a dos pies y toque con una mano en el medidor'),
+
+ cmj:()=>svg(230,
+   ground(211)+`<rect x="56" y="205" width="200" height="6" rx="2" fill="${BLU}"/>`+tx(156,226,'Plataforma o alfombra de contacto','blu','middle')+
+   fig({h:[92,122],n:[92,136],hip:[84,170],lk:[102,186],lf:[90,205],rk:[106,184],rf:[98,205],le:[70,152],lh:[82,168],re:[104,150],rh:[90,168]},{op:.35})+
+   badge(60,110,1,MUT)+tx(92,100,'Baja rápido','','middle')+
+   fig({h:[210,40],n:[210,54],hip:[210,100],lk:[206,128],lf:[204,156],rk:[216,128],rf:[216,156],le:[196,76],lh:[204,98],re:[224,76],rh:[216,98]})+
+   badge(244,40,2)+tx(210,20,'Manos en la cintura','hl','middle')+
+   dim(288,205,288,156)+tx(294,186,'Altura','acc'),
+   'Salto vertical con contramovimiento: manos en la cintura, bajada rápida y salto máximo sobre la plataforma'),
 
  horizontal:()=>svg(235,
    ground(200)+`<line x1="62" y1="186" x2="62" y2="212" stroke="${INK}" stroke-width="4"/>`+tx(66,184,'Línea','hl')+
@@ -1672,9 +1687,27 @@ function ageAt(nac,fecha){
   let a=f.getFullYear()-b.getFullYear(); const m=f.getMonth()-b.getMonth();
   if(m<0||(m===0&&f.getDate()<b.getDate())) a--; return a>=0&&a<100?a:null;
 }
-function imcInfo(imc,edad){
+/* OMS 2007, IMC para la edad 5-19 años: L,M,S por mes desde 60 meses (repositorio oficial WHO anthroplus, bfawho2007) */
+const BFA_WHO={M:"-0.7151,15.2679,0.08366;-0.7387,15.2641,0.08390;-0.7621,15.2616,0.08414;-0.7856,15.2604,0.08439;-0.8089,15.2605,0.08464;-0.8322,15.2619,0.08490;-0.8554,15.2645,0.08516;-0.8785,15.2684,0.08543;-0.9015,15.2737,0.08570;-0.9243,15.2801,0.08597;-0.9471,15.2877,0.08625;-0.9697,15.2965,0.08653;-0.9921,15.3062,0.08682;-1.0144,15.3169,0.08711;-1.0365,15.3285,0.08741;-1.0584,15.3408,0.08771;-1.0801,15.3540,0.08802;-1.1017,15.3679,0.08833;-1.1230,15.3825,0.08865;-1.1441,15.3978,0.08898;-1.1649,15.4137,0.08931;-1.1856,15.4302,0.08964;-1.2060,15.4473,0.08998;-1.2261,15.4650,0.09033;-1.2460,15.4832,0.09068;-1.2656,15.5019,0.09103;-1.2849,15.5210,0.09139;-1.3040,15.5407,0.09176;-1.3228,15.5608,0.09213;-1.3414,15.5814,0.09251;-1.3596,15.6023,0.09289;-1.3776,15.6237,0.09327;-1.3953,15.6455,0.09366;-1.4126,15.6677,0.09406;-1.4297,15.6903,0.09445;-1.4464,15.7133,0.09486;-1.4629,15.7368,0.09526;-1.4790,15.7606,0.09567;-1.4947,15.7848,0.09609;-1.5101,15.8094,0.09651;-1.5252,15.8344,0.09693;-1.5399,15.8597,0.09735;-1.5542,15.8855,0.09778;-1.5681,15.9116,0.09821;-1.5817,15.9381,0.09864;-1.5948,15.9651,0.09907;-1.6076,15.9925,0.09951;-1.6199,16.0205,0.09994;-1.6318,16.0490,0.10038;-1.6433,16.0781,0.10082;-1.6544,16.1078,0.10126;-1.6651,16.1381,0.10170;-1.6753,16.1692,0.10214;-1.6851,16.2009,0.10259;-1.6944,16.2333,0.10303;-1.7032,16.2665,0.10347;-1.7116,16.3004,0.10391;-1.7196,16.3351,0.10435;-1.7271,16.3704,0.10478;-1.7341,16.4065,0.10522;-1.7407,16.4433,0.10566;-1.7468,16.4807,0.10609;-1.7525,16.5189,0.10652;-1.7578,16.5578,0.10695;-1.7626,16.5974,0.10738;-1.7670,16.6376,0.10780;-1.7710,16.6786,0.10823;-1.7745,16.7203,0.10865;-1.7777,16.7628,0.10906;-1.7804,16.8059,0.10948;-1.7828,16.8497,0.10989;-1.7847,16.8941,0.11030;-1.7862,16.9392,0.11070;-1.7873,16.9850,0.11110;-1.7881,17.0314,0.11150;-1.7884,17.0784,0.11189;-1.7884,17.1262,0.11228;-1.7880,17.1746,0.11266;-1.7873,17.2236,0.11304;-1.7861,17.2734,0.11342;-1.7846,17.3240,0.11379;-1.7828,17.3752,0.11415;-1.7806,17.4272,0.11451;-1.7780,17.4799,0.11487;-1.7751,17.5334,0.11522;-1.7719,17.5877,0.11556;-1.7684,17.6427,0.11590;-1.7645,17.6985,0.11623;-1.7604,17.7551,0.11656;-1.7559,17.8124,0.11688;-1.7511,17.8704,0.11720;-1.7461,17.9292,0.11751;-1.7408,17.9887,0.11781;-1.7352,18.0488,0.11811;-1.7293,18.1096,0.11841;-1.7232,18.1710,0.11869;-1.7168,18.2330,0.11898;-1.7102,18.2955,0.11925;-1.7033,18.3586,0.11952;-1.6962,18.4221,0.11979;-1.6888,18.4860,0.12005;-1.6811,18.5502,0.12030;-1.6732,18.6148,0.12055;-1.6651,18.6795,0.12079;-1.6568,18.7445,0.12102;-1.6482,18.8095,0.12125;-1.6394,18.8746,0.12148;-1.6304,18.9398,0.12170;-1.6211,19.0050,0.12191;-1.6116,19.0701,0.12212;-1.6020,19.1351,0.12233;-1.5921,19.2000,0.12253;-1.5821,19.2648,0.12272;-1.5719,19.3294,0.12291;-1.5615,19.3937,0.12310;-1.5510,19.4578,0.12328;-1.5403,19.5217,0.12346;-1.5294,19.5853,0.12363;-1.5185,19.6486,0.12380;-1.5074,19.7117,0.12396;-1.4961,19.7744,0.12412;-1.4848,19.8367,0.12428;-1.4733,19.8987,0.12443;-1.4617,19.9603,0.12458;-1.4500,20.0215,0.12473;-1.4382,20.0823,0.12487;-1.4263,20.1427,0.12501;-1.4143,20.2026,0.12514;-1.4022,20.2621,0.12528;-1.3900,20.3211,0.12541;-1.3777,20.3796,0.12554;-1.3653,20.4376,0.12567;-1.3529,20.4951,0.12579;-1.3403,20.5521,0.12591;-1.3277,20.6085,0.12603;-1.3149,20.6644,0.12615;-1.3021,20.7197,0.12627;-1.2892,20.7745,0.12638;-1.2762,20.8287,0.12650;-1.2631,20.8824,0.12661;-1.2499,20.9355,0.12672;-1.2366,20.9881,0.12683;-1.2233,21.0400,0.12694;-1.2098,21.0914,0.12704;-1.1962,21.1423,0.12715;-1.1826,21.1925,0.12726;-1.1688,21.2423,0.12736;-1.1550,21.2914,0.12746;-1.1410,21.3400,0.12756;-1.1270,21.3880,0.12767;-1.1129,21.4354,0.12777;-1.0986,21.4822,0.12787;-1.0843,21.5285,0.12797;-1.0699,21.5742,0.12807;-1.0553,21.6193,0.12816;-1.0407,21.6638,0.12826;-1.0260,21.7077,0.12836;-1.0112,21.7510,0.12845;-0.9962,21.7937,0.12855;-0.9812,21.8358,0.12864;-0.9661,21.8773,0.12874;-0.9509,21.9182,0.12883;-0.9356,21.9585,0.12893;-0.9202,21.9982,0.12902;-0.9048,22.0374,0.12911;-0.8892,22.0760,0.12920;-0.8735,22.1140,0.12930;-0.8578,22.1514,0.12939;-0.8419,22.1883,0.12948;-0.8419,22.1883,0.12948",F:"-0.8702,15.2453,0.09646;-0.8886,15.2441,0.09692;-0.9068,15.2434,0.09738;-0.9248,15.2433,0.09783;-0.9427,15.2438,0.09829;-0.9605,15.2448,0.09875;-0.9780,15.2464,0.09920;-0.9954,15.2487,0.09966;-1.0126,15.2516,0.10012;-1.0296,15.2551,0.10058;-1.0464,15.2592,0.10104;-1.0630,15.2641,0.10149;-1.0794,15.2697,0.10195;-1.0956,15.2760,0.10241;-1.1115,15.2831,0.10287;-1.1272,15.2911,0.10333;-1.1427,15.2998,0.10379;-1.1579,15.3095,0.10425;-1.1728,15.3200,0.10471;-1.1875,15.3314,0.10517;-1.2019,15.3439,0.10562;-1.2160,15.3572,0.10608;-1.2298,15.3717,0.10654;-1.2433,15.3871,0.10700;-1.2565,15.4036,0.10746;-1.2693,15.4211,0.10792;-1.2819,15.4397,0.10837;-1.2941,15.4593,0.10883;-1.3060,15.4798,0.10929;-1.3175,15.5014,0.10974;-1.3287,15.5240,0.11020;-1.3395,15.5476,0.11065;-1.3499,15.5723,0.11110;-1.3600,15.5979,0.11156;-1.3697,15.6246,0.11201;-1.3790,15.6523,0.11246;-1.3880,15.6810,0.11291;-1.3966,15.7107,0.11335;-1.4047,15.7415,0.11380;-1.4125,15.7732,0.11424;-1.4199,15.8058,0.11469;-1.4270,15.8394,0.11513;-1.4336,15.8738,0.11557;-1.4398,15.9090,0.11601;-1.4456,15.9451,0.11644;-1.4511,15.9818,0.11688;-1.4561,16.0194,0.11731;-1.4607,16.0575,0.11774;-1.4650,16.0964,0.11816;-1.4688,16.1358,0.11859;-1.4723,16.1759,0.11901;-1.4753,16.2166,0.11943;-1.4780,16.2580,0.11985;-1.4803,16.2999,0.12026;-1.4823,16.3425,0.12067;-1.4838,16.3858,0.12108;-1.4850,16.4298,0.12148;-1.4859,16.4746,0.12188;-1.4864,16.5200,0.12228;-1.4866,16.5663,0.12268;-1.4864,16.6133,0.12307;-1.4859,16.6612,0.12346;-1.4851,16.7100,0.12384;-1.4839,16.7595,0.12422;-1.4825,16.8100,0.12460;-1.4807,16.8614,0.12497;-1.4787,16.9136,0.12534;-1.4763,16.9667,0.12571;-1.4737,17.0208,0.12607;-1.4708,17.0757,0.12643;-1.4677,17.1316,0.12678;-1.4642,17.1883,0.12713;-1.4606,17.2459,0.12748;-1.4567,17.3044,0.12782;-1.4526,17.3637,0.12816;-1.4482,17.4238,0.12849;-1.4436,17.4847,0.12882;-1.4389,17.5464,0.12914;-1.4339,17.6088,0.12946;-1.4288,17.6719,0.12978;-1.4235,17.7357,0.13009;-1.4180,17.8001,0.13040;-1.4123,17.8651,0.13070;-1.4065,17.9306,0.13099;-1.4006,17.9966,0.13129;-1.3945,18.0630,0.13158;-1.3883,18.1297,0.13186;-1.3819,18.1967,0.13214;-1.3755,18.2639,0.13241;-1.3689,18.3312,0.13268;-1.3621,18.3986,0.13295;-1.3553,18.4660,0.13321;-1.3483,18.5333,0.13347;-1.3413,18.6006,0.13372;-1.3341,18.6677,0.13397;-1.3269,18.7346,0.13421;-1.3195,18.8012,0.13445;-1.3121,18.8675,0.13469;-1.3046,18.9335,0.13492;-1.2970,18.9991,0.13514;-1.2894,19.0642,0.13537;-1.2816,19.1289,0.13559;-1.2739,19.1931,0.13580;-1.2661,19.2567,0.13601;-1.2583,19.3197,0.13622;-1.2504,19.3820,0.13642;-1.2425,19.4437,0.13662;-1.2345,19.5045,0.13681;-1.2266,19.5647,0.13700;-1.2186,19.6240,0.13719;-1.2107,19.6824,0.13738;-1.2027,19.7400,0.13756;-1.1947,19.7966,0.13774;-1.1867,19.8523,0.13791;-1.1788,19.9070,0.13808;-1.1708,19.9607,0.13825;-1.1629,20.0133,0.13841;-1.1549,20.0648,0.13858;-1.1470,20.1152,0.13873;-1.1390,20.1644,0.13889;-1.1311,20.2125,0.13904;-1.1232,20.2595,0.13920;-1.1153,20.3053,0.13934;-1.1074,20.3499,0.13949;-1.0996,20.3934,0.13963;-1.0917,20.4357,0.13977;-1.0838,20.4769,0.13991;-1.0760,20.5170,0.14005;-1.0681,20.5560,0.14018;-1.0603,20.5938,0.14031;-1.0525,20.6306,0.14044;-1.0447,20.6663,0.14057;-1.0368,20.7008,0.14070;-1.0290,20.7344,0.14082;-1.0212,20.7668,0.14094;-1.0134,20.7982,0.14106;-1.0055,20.8286,0.14118;-0.9977,20.8580,0.14130;-0.9898,20.8863,0.14142;-0.9819,20.9137,0.14153;-0.9740,20.9401,0.14164;-0.9661,20.9656,0.14176;-0.9582,20.9901,0.14187;-0.9503,21.0138,0.14198;-0.9423,21.0367,0.14208;-0.9344,21.0587,0.14219;-0.9264,21.0801,0.14230;-0.9184,21.1007,0.14240;-0.9104,21.1206,0.14250;-0.9024,21.1399,0.14261;-0.8944,21.1586,0.14271;-0.8863,21.1768,0.14281;-0.8783,21.1944,0.14291;-0.8703,21.2116,0.14301;-0.8623,21.2282,0.14311;-0.8542,21.2444,0.14320;-0.8462,21.2603,0.14330;-0.8382,21.2757,0.14340;-0.8301,21.2908,0.14349;-0.8221,21.3055,0.14359;-0.8140,21.3200,0.14368;-0.8060,21.3341,0.14377;-0.7980,21.3480,0.14386;-0.7899,21.3617,0.14396;-0.7819,21.3752,0.14405;-0.7738,21.3884,0.14414;-0.7658,21.4014,0.14423;-0.7577,21.4143,0.14432;-0.7496,21.4269,0.14441;-0.7496,21.4269,0.14441"};
+function monthsAt(nac,fecha){
+  if(!nac) return null; const b=new Date(nac+'T12:00'),f=new Date((fecha||todayISO())+'T12:00');
+  let m=(f.getFullYear()-b.getFullYear())*12+f.getMonth()-b.getMonth(); if(f.getDate()<b.getDate()) m--; return m>=0?m:null;
+}
+let BFA_ROWS=null;
+/* Puntaje z de IMC para la edad (OMS 2007), de 61 a 228 meses; null fuera de rango */
+function bmiZ(imc,sexo,meses){
+  if(!imc||(sexo!=='F'&&sexo!=='M')||meses===null||meses===undefined||meses<61||meses>228) return null;
+  if(!BFA_ROWS) BFA_ROWS={F:BFA_WHO.F.split(';').map(r=>r.split(',').map(Number)),M:BFA_WHO.M.split(';').map(r=>r.split(',').map(Number))};
+  const [L,M,S]=BFA_ROWS[sexo][meses-60]; return (Math.pow(imc/M,L)-1)/(L*S);
+}
+function imcInfo(imc,edad,z){
   if(imc===null) return null;
-  if(edad!==null&&edad<18) return {txt:'Menor de 18: interpretar con percentiles OMS por edad',c:'cn'};
+  if(z!==null&&z!==undefined){const zt=(z>0?'+':'')+z.toFixed(1).replace('-','−');
+    if(z< -2) return {txt:`IMC para la edad (OMS) z ${zt}: delgadez`,c:'c2'};
+    if(z<=1) return {txt:`IMC para la edad (OMS) z ${zt}: normal`,c:'c0'};
+    if(z<=2) return {txt:`IMC para la edad (OMS) z ${zt}: sobrepeso`,c:'c2'};
+    return {txt:`IMC para la edad (OMS) z ${zt}: obesidad`,c:'c3'};}
+  if(edad!==null&&edad<19) return {txt:edad<5?'Menor de 5 años: la referencia OMS de 5 a 19 años no aplica':'Menor de 19: indique la rama para calcular el IMC para la edad (OMS)',c:'cn'};
   if(imc<18.5) return {txt:'Bajo peso',c:'c2'};
   if(imc<25) return {txt:'Normal',c:'c0'};
   if(imc<30) return {txt:'Sobrepeso',c:'c2'};
@@ -1714,7 +1747,8 @@ function computeEval(ev,atleta,yoyo){
     }
     R[T.key]={val,extra,err};
   }
-  return {edad,peso,talla,mm,imc,imm,imcI:imcInfo(imc,edad),R};
+  const imcZ=bmiZ(imc,atleta&&atleta.sexo,monthsAt(atleta&&atleta.nac,ev.fecha));
+  return {edad,peso,talla,mm,imc,imm,imcZ,imcI:imcInfo(imc,edad,imcZ),R};
 }
 const fmtN=(v,d)=>v===null||v===undefined?'—':Number(v).toLocaleString('es-HN',{minimumFractionDigits:d,maximumFractionDigits:d});
 function fmtTest(T,v){if(v===null||v===undefined)return '—';const d=T.dec!==undefined?T.dec:(T.unidad==='kg'?0:0);return fmtN(v,d)+' '+T.unidad}
@@ -1755,8 +1789,9 @@ function loadLocal(){
   COLS.forEach(c=>S[c]=new Map(Object.entries(d[c]||{})));
   if(d.thr) THR=d.thr;
   if(d.niv) NIV=d.niv;
+  if(d.normOn) NORM_ON={...NORM_ON,...d.normOn};
 }
-function saveLocal(){const o={thr:THR,niv:NIV};COLS.forEach(c=>o[c]=Object.fromEntries(S[c]));local.set('yoyo-registro',o);
+function saveLocal(){const o={thr:THR,niv:NIV,normOn:NORM_ON};COLS.forEach(c=>o[c]=Object.fromEntries(S[c]));local.set('yoyo-registro',o);
   dirtySinceBackup=true;
   let ok=false;try{ok=!!localStorage.getItem('yoyo-registro')}catch(e){ok=false}
   if(!ok) warnStorage('Este navegador no está guardando los datos. Si cierra o recarga la página, se pierden. Copie el respaldo ahora.',true);
@@ -1783,8 +1818,8 @@ const OFFLINE_DAYS=30; // días que se puede trabajar sin conexión desde la úl
 const vbKey=k=>'vb-'+k+'-'+(window.vbUser&&window.vbUser.id||'x');
 const isNetErr=e=>{if(!e)return false;if(typeof navigator!=='undefined'&&navigator.onLine===false)return true;
   const m=String(e.message||e.msg||e||'');return e.name==='AuthRetryableFetchError'||e.status===0||/failed to fetch|networkerror|network request failed|load failed|fetch failed|err_internet|conexi/i.test(m)};
-function vbSaveCache(){const o={thr:THR,niv:NIV,fecha:Date.now()};COLS.forEach(c=>o[c]=Object.fromEntries(S[c]));local.set(vbKey('cache'),o)}
-function vbLoadCache(){const o=local.get(vbKey('cache'),null);if(!o)return false;COLS.forEach(c=>S[c]=new Map(Object.entries(o[c]||{})));if(o.thr)THR=o.thr;if(o.niv)NIV=o.niv;return true}
+function vbSaveCache(){const o={thr:THR,niv:NIV,normOn:NORM_ON,fecha:Date.now()};COLS.forEach(c=>o[c]=Object.fromEntries(S[c]));local.set(vbKey('cache'),o)}
+function vbLoadCache(){const o=local.get(vbKey('cache'),null);if(!o)return false;COLS.forEach(c=>S[c]=new Map(Object.entries(o[c]||{})));if(o.thr)THR=o.thr;if(o.niv)NIV=o.niv;if(o.normOn)NORM_ON={...NORM_ON,...o.normOn};return true}
 const vbQueueGet=()=>local.get(vbKey('cola'),{});
 function vbQueue(op,col,id,data){const q=vbQueueGet();q[col+'|'+id]={op,col,id:String(id),data:op==='put'?data:null,t:Date.now()};local.set(vbKey('cola'),q);vbNote()}
 function vbNote(){
@@ -1824,7 +1859,7 @@ async function del(col,id){
   S[col].delete(id); if(S.mode==='local') saveLocal(); else vbSaveCache(); scheduleRender(); cloudDirty();
 }
 async function saveThr(){
-  if(S.mode==='db'||S.mode==='offline'){await vbWrite('put','config','umbrales',{thr:THR,niv:NIV});vbSaveCache()}
+  if(S.mode==='db'||S.mode==='offline'){await vbWrite('put','config','umbrales',{thr:THR,niv:NIV,normOn:NORM_ON});vbSaveCache()}
   else saveLocal();
   cloudDirty();
 }
@@ -1832,7 +1867,7 @@ function applyCloudRows(rows){
   COLS.forEach(c=>S[c]=new Map());
   for(const row of rows){
     if(COLS.includes(row.collection)) S[row.collection].set(row.record_id,row.data);
-    if(row.collection==='config'&&row.record_id==='umbrales'&&row.data){if(row.data.thr)THR=JSON.parse(JSON.stringify(row.data.thr));if(row.data.niv)NIV=JSON.parse(JSON.stringify(row.data.niv));}
+    if(row.collection==='config'&&row.record_id==='umbrales'&&row.data){if(row.data.thr)THR=JSON.parse(JSON.stringify(row.data.thr));if(row.data.niv)NIV=JSON.parse(JSON.stringify(row.data.niv));if(row.data.normOn)NORM_ON={...NORM_ON,...row.data.normOn};}
   }
   vbSaveCache();
 }
@@ -1906,7 +1941,7 @@ async function initStore(){
       }
     }
     if(localData.thr||localData.niv){
-      const {error}=await window.vbSupabase.from('app_records').upsert({user_id:window.vbUser.id,collection:'config',record_id:'umbrales',data:{thr:localData.thr||THR,niv:localData.niv||NIV},updated_at:new Date().toISOString()},{onConflict:'user_id,collection,record_id'});
+      const {error}=await window.vbSupabase.from('app_records').upsert({user_id:window.vbUser.id,collection:'config',record_id:'umbrales',data:{thr:localData.thr||THR,niv:localData.niv||NIV,normOn:localData.normOn||NORM_ON},updated_at:new Date().toISOString()},{onConflict:'user_id,collection,record_id'});
       if(error){window.vbShowGate(true,'Los registros se copiaron, pero falló la configuración: '+error.message);return;}
     }
     const {data:reloaded,error:reloadError}=await window.vbSupabase.from('app_records').select('collection,record_id,data').eq('user_id',window.vbUser.id);
@@ -1919,7 +1954,7 @@ async function initStore(){
     const row=payload.eventType==='DELETE'?payload.old:payload.new;
     if(!row)return;
     if(COLS.includes(row.collection)){if(payload.eventType==='DELETE')S[row.collection].delete(row.record_id);else S[row.collection].set(row.record_id,row.data);vbSaveCache();scheduleRender();}
-    else if(row.collection==='config'&&row.record_id==='umbrales'&&row.data){if(row.data.thr)THR=JSON.parse(JSON.stringify(row.data.thr));if(row.data.niv)NIV=JSON.parse(JSON.stringify(row.data.niv));scheduleRender();}
+    else if(row.collection==='config'&&row.record_id==='umbrales'&&row.data){if(row.data.thr)THR=JSON.parse(JSON.stringify(row.data.thr));if(row.data.niv)NIV=JSON.parse(JSON.stringify(row.data.niv));if(row.data.normOn)NORM_ON={...NORM_ON,...row.data.normOn};scheduleRender();}
   }).subscribe();}catch(e){}
   scheduleRender();
 }
@@ -2193,11 +2228,11 @@ renderEvaluador();if(!EVALUADOR)openGate(false);
    Pruebas de la sesión, evaluaciones en curso y respaldo
    ========================================================= */
 const SEL_KEYS=['antro',...TESTS.map(T=>T.key)];
-/* Evaluaciones guardadas antes de existir los burpees: su plan eran las 10 pruebas originales */
-const LEGACY_KEYS=SEL_KEYS.filter(k=>k!=='burpees');
+/* Evaluaciones guardadas antes de existir los burpees y el CMJ: su plan eran las 10 pruebas originales */
+const LEGACY_KEYS=SEL_KEYS.filter(k=>k!=='burpees'&&k!=='cmj');
 const planOf=ev=>(ev.sel&&ev.sel.length?ev.sel:LEGACY_KEYS).filter(k=>SEL_KEYS.includes(k));
 const SEL_NAME=k=>k==='antro'?'Antropometría':TESTS.find(T=>T.key===k).nombre;
-const PRESETS={todas:SEL_KEYS,dia1:['antro','bloqueo','ataque','horizontal','s5','s10','ttest','balon','burpees'],dia2:['antro','sentadilla','plancha','yoyo'],ninguna:[]};
+const PRESETS={todas:SEL_KEYS,dia1:['antro','bloqueo','ataque','horizontal','cmj','s5','s10','ttest','balon','burpees'],dia2:['antro','sentadilla','plancha','yoyo'],ninguna:[]};
 let selSet=new Set(SEL_KEYS),hideDone=false,doneSnap=new Set();
 function doneOf(C){
   const d=new Set();
@@ -2282,7 +2317,7 @@ async function saveFile(name,data,mime){
   a.href=url;a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);a.remove()},1500);
 }
 function backupData(){
-  const o={app:'evaluacion-fisica-voleibol',version:2,fecha:new Date().toISOString(),thr:THR,niv:NIV,evaluador:EVALUADOR||undefined};
+  const o={app:'evaluacion-fisica-voleibol',version:2,fecha:new Date().toISOString(),thr:THR,niv:NIV,normOn:NORM_ON,evaluador:EVALUADOR||undefined};
   COLS.forEach(c=>o[c]=Object.fromEntries(S[c]));return o;
 }
 function renderBackupNote(){const d=local.get('yoyo-last-backup',null);$('backupNote').textContent=d?`Último respaldo: ${fdate(d)}`:'Sin respaldos descargados'}
@@ -2341,7 +2376,7 @@ async function applyRestore(replace){
         n++;if(n%10===0)toast('btoast',`Cargando… ${n} de ${total}`);
       }
     }
-    if(o.thr)THR=o.thr;if(o.niv)NIV=o.niv;await saveThr();
+    if(o.thr)THR=o.thr;if(o.niv)NIV=o.niv;if(o.normOn)NORM_ON={...NORM_ON,...o.normOn};await saveThr();
     if(!EVALUADOR&&o.evaluador&&o.evaluador.nombre&&o.evaluador.nombre!=='Patricia'){EVALUADOR=o.evaluador;local.set('yoyo-evaluador',EVALUADOR);$('evalGate').hidden=true;renderEvaluador()}
     loadedKey=null;scheduleRender();toast('btoast',replace?'Datos reemplazados con el respaldo.':'Respaldo combinado con los datos actuales.');
   }catch(err){toast('btoast',`Se cargaron ${n} de ${total} registros. Revise la conexión y vuelva a cargar el archivo.`,true)}
@@ -2621,7 +2656,7 @@ $('resetThr').onclick=async()=>{THR=JSON.parse(JSON.stringify(DEFAULT_THR));rend
    ========================================================= */
 const LVL_NAMES=['','Muy bajo','Bajo','Medio','Bueno','Excelente'];
 const ASPECTS=[
-  {key:'salto',nombre:'Potencia de salto',tests:['bloqueo','ataque','horizontal']},
+  {key:'salto',nombre:'Potencia de salto',tests:['bloqueo','ataque','horizontal','cmj']},
   {key:'velocidad',nombre:'Velocidad',tests:['s5','s10']},
   {key:'agilidad',nombre:'Agilidad',tests:['ttest']},
   {key:'fuerza',nombre:'Fuerza',tests:['sentadilla','balon','plancha']},
@@ -2630,10 +2665,45 @@ const ASPECTS=[
 /* Valor mínimo para llegar a Bajo, Medio, Bueno y Excelente. En sprints y T-Test: tiempo máximo.
    Sentadilla: 1RM dividido entre el peso corporal. Referencias orientativas para juvenil y mayor. */
 const DEFAULT_NIV={
-  F:{bloqueo:[30,38,45,52],ataque:[40,48,55,62],horizontal:[160,180,200,220],s5:[1.35,1.25,1.17,1.10],s10:[2.20,2.08,1.98,1.90],ttest:[12.5,11.5,10.8,10.2],sentadilla:[0.75,1.0,1.25,1.5],balon:[6,7.5,9,10.5],plancha:[45,75,105,150],yoyo:[400,600,1000,1400],burpees:[10,14,18,22]},
-  M:{bloqueo:[40,48,56,64],ataque:[55,65,73,82],horizontal:[200,220,240,260],s5:[1.20,1.12,1.05,1.00],s10:[1.98,1.88,1.80,1.73],ttest:[11.0,10.3,9.8,9.3],sentadilla:[1.0,1.3,1.6,1.9],balon:[8,10,12,14],plancha:[60,90,120,180],yoyo:[700,1000,1500,2000],burpees:[14,18,22,27]}
+  F:{bloqueo:[30,38,45,52],ataque:[40,48,55,62],horizontal:[160,180,200,220],cmj:[28.6,30.4,32.2,34.8],s5:[1.35,1.25,1.17,1.10],s10:[2.20,2.08,1.98,1.90],ttest:[12.5,11.5,10.8,10.2],sentadilla:[0.75,1.0,1.25,1.5],balon:[6,7.5,9,10.5],plancha:[45,75,105,150],yoyo:[400,600,1000,1400],burpees:[10,14,18,22]},
+  M:{bloqueo:[40,48,56,64],ataque:[55,65,73,82],horizontal:[200,220,240,260],cmj:[27.3,30.1,32.9,36.8],s5:[1.20,1.12,1.05,1.00],s10:[1.98,1.88,1.80,1.73],ttest:[11.0,10.3,9.8,9.3],sentadilla:[1.0,1.3,1.6,1.9],balon:[8,10,12,14],plancha:[60,90,120,180],yoyo:[700,1000,1500,2000],burpees:[14,18,22,27]}
 };
 let NIV=JSON.parse(JSON.stringify(DEFAULT_NIV));
+
+/* Normas internacionales por edad y sexo (aprobadas por la entrenadora el 23/10/2026).
+   Cortes: Bajo = P25, Medio = P50, Bueno = P75, Excelente = P95. Con media ± DE: P25 = M - 0,67 DE, P75 = M + 0,67 DE, P95 = M + 1,645 DE.
+   Marca: D = valor directo de la fuente, C = calculado de media y DE, E = estimado. */
+const NORM_SRC={
+  fitback:{corto:'FitBack 2023',largo:'Tomkinson et al. 2023, red FitBack, Br J Sports Med (doi 10.1136/bjsports-2022-106176). Población escolar europea, 1,35 millones de mediciones.'},
+  polak:{corto:'Voleibol juvenil élite',largo:'Polakovičová et al. 2018, Acta Gymnica 48(3):115-120. Selecciones juveniles de voleibol de Rep. Checa y Eslovaquia (FiTRO Jumper).'},
+  oliveira:{corto:'Voleibol femenino de club',largo:'Oliveira et al. 2025, BMC Sports Sci Med Rehabil 17:209. Jugadoras de clubes regionales de Portugal, Sub-13 a Sub-18.'},
+  ttest:{corto:'T-test adultos',largo:'Tabla de uso común para deportistas adultos de equipo (Topend Sports; protocolo de Semenick 1990, fiabilidad de Pauole et al. 2000). El corte de Bajo es estimado (+1 s).'},
+  oms:{corto:'OMS 2007',largo:'OMS, referencia de crecimiento 5-19 años, IMC para la edad (coeficientes LMS oficiales).'}
+};
+const NORMS={
+  horizontal:{src:'fitback',rango:'12 a 18 años (18 en adelante usa la fila de 18, estimado)',
+    F:{12:[126.9,147.8,169.1,190.7],13:[131.9,153.7,175.8,198.3],14:[134.4,156.8,179.4,202.2],15:[134.8,157.2,179.7,202.3],16:[134.2,156.5,178.6,200.7],17:[134.7,156.8,178.6,200.3],18:[136.2,158.1,179.6,200.8]},
+    M:{12:[138.1,159.8,181.1,202.4],13:[150.0,173.3,196.0,218.7],14:[162.1,186.9,210.7,234.4],15:[171.5,197.0,221.4,245.5],16:[177.7,203.4,227.8,251.8],17:[182.2,207.8,231.8,255.4],18:[185.8,210.9,234.4,257.4]},
+    pick:e=>e<12?null:Math.min(e,18),mark:e=>e>18?'E':'D'},
+  cmj:{src:'polak',rango:'13 a 19 años (19 en adelante usa la fila de 19)',
+    F:{13:[28.6,30.4,32.2,34.8],14:[28.9,32.2,35.5,40.3],15:[29.8,32.1,34.4,37.7],16:[27.9,30.6,33.3,37.2],17:[27.8,30.8,33.8,38.2],18:[28.4,31.0,33.6,37.3],19:[29.8,31.4,33.0,35.3]},
+    M:{13:[27.3,30.1,32.9,36.8],14:[29.2,31.8,34.4,38.2],15:[33.1,35.9,38.7,42.6],16:[34.0,37.2,40.4,45.1],17:[36.5,39.4,42.3,46.5],18:[36.8,40.1,43.4,48.2],19:[37.4,41.3,45.2,50.8]},
+    pick:e=>e<13?null:Math.min(e,19),mark:e=>e>19?'E':'C'},
+  s10:{src:'oliveira',rango:'solo rama femenina: 11 a 15 años (Sub-13 a Sub-16) y 16 en adelante (Sub-18)',
+    F:{11:[2.21,2.10,1.99,1.82],16:[2.16,2.05,1.94,1.79]},M:{},
+    pick:e=>e<11?null:e<16?11:16,mark:e=>e>17?'E':'C'},
+  ttest:{src:'ttest',rango:'16 años en adelante (Sub-18 y mayor)',
+    F:{16:[13.5,12.5,11.5,10.5]},M:{16:[12.5,11.5,10.5,9.5]},
+    pick:e=>e<16?null:16,mark:()=>'D'}
+};
+const NORM_LABEL=(k,row)=>k==='s10'?(row==11?'11-15 años':'16 años o más'):k==='ttest'?'16 años o más':row+(row==18&&k==='horizontal'||row==19&&k==='cmj'?' años o más':' años');
+let NORM_ON={horizontal:true,cmj:true,s10:true,ttest:true};
+/* Umbrales de la norma para una prueba, sexo y edad; null si no aplica */
+function normFor(key,sexo,edad){
+  const N=NORMS[key];if(!N||NORM_ON[key]===false||edad===null||edad===undefined||!sexo)return null;
+  const r=N.pick(edad);if(r===null)return null;const t=N[sexo]&&N[sexo][r];if(!t)return null;
+  return {t,src:N.src,mark:N.mark(edad),row:r};
+}
 /* Completa referencias guardadas antes de agregar pruebas nuevas */
 function fillNiv(){for(const s of ['F','M']){NIV[s]=NIV[s]||{};for(const k in DEFAULT_NIV[s]) if(!Array.isArray(NIV[s][k])) NIV[s][k]=DEFAULT_NIV[s][k].slice()}}
 /* Importancia de cada capacidad según la posición (multiplica la prioridad) */
@@ -2644,9 +2714,12 @@ const POS_W={
   'Armador':{salto:1.0,velocidad:1.2,agilidad:1.3,fuerza:0.9,resistencia:1.1},
   'Líbero':{salto:0.6,velocidad:1.3,agilidad:1.4,fuerza:0.9,resistencia:1.2}
 };
-function testLevel(T,sexo,v){
-  fillNiv();
-  const t=NIV[sexo]&&NIV[sexo][T.key];if(!t||v===null||v===undefined)return null;
+function testRef(T,sexo,edad){
+  const n=normFor(T.key,sexo,edad);if(n)return n;
+  fillNiv();const t=NIV[sexo]&&NIV[sexo][T.key];return t?{t,src:'interna',mark:'',row:null}:null;
+}
+function testLevel(T,sexo,v,edad){
+  const R=testRef(T,sexo,edad===undefined?null:edad);const t=R&&R.t;if(!t||v===null||v===undefined)return null;
   if(T.mejor==='min'){if(v>t[0])return 1;if(v>t[1])return 2;if(v>t[2])return 3;if(v>t[3])return 4;return 5}
   if(v<t[0])return 1;if(v<t[1])return 2;if(v<t[2])return 3;if(v<t[3])return 4;return 5;
 }
@@ -2663,7 +2736,8 @@ function athleteLevel(aid,temp,onlyMom){
       let use=v,rel=null;
       if(T.key==='sentadilla'){if(!x.C.peso)continue;rel=v/x.C.peso;use=rel}
       if(T.key==='yoyo'){const id=evalId(aid,temp,m);yoyo=yoyoFor(id,x.ev)}
-      vals[T.key]={v,use,rel,mom:m,lvl:sexo?testLevel(T,sexo,use):null};
+      const ref=sexo?testRef(T,sexo,x.C.edad):null;
+      vals[T.key]={v,use,rel,mom:m,lvl:sexo?testLevel(T,sexo,use,x.C.edad):null,ref:ref?ref.src:null};
     }
   }
   if(edad===null)edad=ageAt(a.nac,todayISO());
@@ -2953,14 +3027,25 @@ function levelHTML(aid){
       <div class="row"><span class="lbl">Nivel general</span><span class="chip ${lvlClass(L.general)}">${lvlName(L.general)} · ${L.general.toFixed(1)} de 5</span></div>
       ${L.aspects.map(A=>`<div class="asp"><div class="row" style="justify-content:space-between"><b>${A.nombre}</b><span class="chip ${lvlClass(A.lvl)}">${lvlName(A.lvl)}</span></div>
         <div class="lbar"><i style="width:${A.lvl?A.lvl/5*100:0}%"></i></div>
-        <p class="hint">${A.tests.map(k=>{const T=TESTS.find(t=>t.key===k),x=L.vals[k];return x?`${T.nombre}: ${k==='sentadilla'?x.rel.toFixed(2)+' × peso':fmtTest(T,x.v)} (${LVL_NAMES[x.lvl]})`:`${T.nombre}: sin dato`}).join(' · ')}</p></div>`).join('')}
+        <p class="hint">${A.tests.map(k=>{const T=TESTS.find(t=>t.key===k),x=L.vals[k];return x?`${T.nombre}: ${k==='sentadilla'?x.rel.toFixed(2)+' × peso':fmtTest(T,x.v)} (${LVL_NAMES[x.lvl]}${x.ref&&NORM_SRC[x.ref]?' · '+NORM_SRC[x.ref].corto:''})`:`${T.nombre}: sin dato`}).join(' · ')}</p></div>`).join('')}
     </div></div>
     ${ins.length?`<div class="banner blue">${ins.map(t=>`<p>${esc(t)}</p>`).join('')}</div>`:''}
     <div><h4>Qué hacer para mejorar</h4><ul class="checks">${recs}</ul></div>
-    <p class="hint">Niveles calculados con referencias orientativas para voleibol juvenil y mayor, que puede ajustar en "Referencias de nivel físico". Con la posición del atleta se ordenan las prioridades.</p>`;
+    <p class="hint">El salto horizontal, el CMJ, el sprint de 10 m (rama femenina) y el T-test se comparan con normas internacionales según la edad y el sexo del atleta el día de la evaluación; la fuente aparece junto al nivel. Las demás pruebas usan las referencias internas del equipo. Todo se revisa en "Referencias de nivel físico". Con la posición del atleta se ordenan las prioridades.</p>`;
+}
+function renderNormTable(){
+  const el=$('normTable');if(!el)return;
+  const mk={D:'directo de la fuente',C:'calculado de media y DE',E:'estimado'};
+  el.innerHTML=Object.entries(NORMS).map(([k,N])=>{const T=TESTS.find(t=>t.key===k),S0=NORM_SRC[N.src];
+    const rows=['F','M'].flatMap(sx=>Object.entries(N[sx]).map(([r,t])=>`<tr><td>${sx==='F'?'Femenina':'Masculina'}</td><td>${NORM_LABEL(k,Number(r))}</td>${t.map(v=>`<td>${fmtN(v,T.dec!==undefined?T.dec:1)}</td>`).join('')}</tr>`)).join('');
+    return `<details class="norm"><summary><label onclick="event.stopPropagation()"><input type="checkbox" id="normon-${k}" ${NORM_ON[k]!==false?'checked':''}> ${T.n}. ${T.nombre}</label> <span class="hint">${esc(S0.corto)} · ${esc(N.rango)}</span></summary>
+      <p class="hint">Fuente: ${esc(S0.largo)} Valores ${k==='horizontal'?'directos (D)':k==='ttest'?'directos (D), con el corte de Bajo estimado':'calculados de media y DE (C)'}.${k==='s10'?' En la rama masculina no se encontró norma accesible: se usa la referencia interna.':''}</p>
+      <div class="tbl"><table><thead><tr><th>Rama</th><th>Edad</th><th>Bajo</th><th>Medio</th><th>Bueno</th><th>Excelente</th></tr></thead><tbody>${rows}</tbody></table></div></details>`}).join('')+
+    `<p class="hint">IMC: en menores de 19 años se calcula el puntaje z de IMC para la edad (${esc(NORM_SRC.oms.largo)}). Delgadez z &lt; -2, normal de -2 a +1, sobrepeso &gt; +1, obesidad &gt; +2. Desde los 19 años se usan las categorías de adulto.</p>`;
+  for(const k in NORMS){const c=$('normon-'+k);if(c)c.onchange=async()=>{NORM_ON[k]=c.checked;try{await saveThr();toast('ntoast',c.checked?'Norma activada.':'Norma desactivada: se usa la referencia interna.');scheduleRender()}catch(e){toast('ntoast','No se pudo guardar.',true)}}}
 }
 function renderNivThr(){
-  fillNiv();
+  fillNiv();renderNormTable();
   const rows=s=>TESTS.map(T=>`<tr><td>${T.n}. ${T.nombre}${T.key==='sentadilla'?' (× peso)':' ('+T.unidad+')'}${T.mejor==='min'?'<br><span class="hint">tiempo máximo</span>':''}</td>${NIV[s][T.key].map((v,i)=>`<td><input type="number" step="any" min="0" id="niv-${s}-${T.key}-${i}" value="${v}" style="width:84px" aria-label="${T.nombre} ${LVL_NAMES[i+2]}"></td>`).join('')}</tr>`).join('');
   $('nivTable').innerHTML=['F','M'].map(s=>`<h4>Rama ${s==='F'?'femenina':'masculina'}</h4><div class="tbl"><table><thead><tr><th>Prueba</th><th>Bajo desde</th><th>Medio desde</th><th>Bueno desde</th><th>Excelente desde</th></tr></thead><tbody>${rows(s)}</tbody></table></div>`).join('');
 }
@@ -2974,7 +3059,7 @@ $('saveNiv').onclick=async()=>{
   }
   NIV=next;try{await saveThr();toast('ntoast','Referencias guardadas.');scheduleRender()}catch(e){toast('ntoast','No se pudieron guardar.',true)}
 };
-$('resetNiv').onclick=async()=>{NIV=JSON.parse(JSON.stringify(DEFAULT_NIV));renderNivThr();try{await saveThr();toast('ntoast','Se restauraron las referencias.');scheduleRender()}catch(e){}};
+$('resetNiv').onclick=async()=>{NIV=JSON.parse(JSON.stringify(DEFAULT_NIV));NORM_ON={horizontal:true,cmj:true,s10:true,ttest:true};renderNivThr();try{await saveThr();toast('ntoast','Se restauraron las referencias.');scheduleRender()}catch(e){}};
 
 /* =========================================================
    Cronómetro Yo-Yo
@@ -3363,7 +3448,7 @@ function fichaPage(doc,aid,temp){
   const row=(name,get,T,dec,extra)=>{const ch=chV(get,T);body.push([pdfSafe(name),cellV('pre',get,T,dec,extra),cellV('mitad',get,T,dec,extra),cellV('fin',get,T,dec,extra),ch?ch.t:'']);meta.push(ch?ch.cls:null)};
   grp('Antropometría');
   row('Edad',C=>C.edad,null,0);row('Peso (kg)',C=>C.peso,null,1);row('Talla (cm)',C=>C.talla,null,0);
-  row('IMC (kg/m²)',C=>C.imc,null,1,C=>C.imcI&&C.edad!==null&&C.edad>=18?C.imcI.txt:'');row('IMM (kg/m²)',C=>C.imm,null,1);
+  row('IMC (kg/m²)',C=>C.imc,null,1,C=>C.imcI&&(C.imcZ!==null||C.edad!==null&&C.edad>=19)?C.imcI.txt:'');row('IMM (kg/m²)',C=>C.imm,null,1);
   for(const [g] of GROUPS){grp(g);for(const T of TESTS.filter(t=>t.grupo===g)) row(`${T.n}. ${T.nombre}`,C=>C.R[T.key].val,T,0,C=>C.R[T.key].extra?C.R[T.key].extra:'')}
   doc.autoTable({startY:y,head:[['Capacidad / Test físico','Pretemporada\n(Línea base)','Mitad de\ntemporada','Fin de\ntemporada','Cambio vs\nlínea base']],body,
     theme:'grid',headStyles:{fillColor:COL.ink,textColor:255,fontSize:8.5,halign:'center',valign:'middle'},
