@@ -3356,6 +3356,44 @@ function teamPDF(){
     didDrawCell:d=>{if(d.section==='body'&&d.column.index===0&&d.row.index<rows.length){pdfAthletePhoto(doc,rows[d.row.index].a,d.cell.x+1,d.cell.y+1,12,13)}}});
   y=doc.lastAutoTable.finalY+5;
   paragraph(doc,'En verde, el mejor resultado del equipo en cada prueba. En sprints y T-Test, menos tiempo es mejor. Saltos de bloqueo y ataque: altura sobre el alcance de pie.',y,{size:8.5,color:COL.muted});
+  // Comparativo longitudinal: cada prueba presenta resultados por atleta en las tres etapas.
+  const comp=[];
+  for(const [aid,a] of [...S.atletas].sort((x,y)=>x[1].nombre.localeCompare(y[1].nombre,'es'))){
+    if(fRama&&a.sexo!==fRama)continue;
+    const stages={};
+    for(const [m] of MOMS){
+      const id=evalId(aid,temp,m),ev=S.evaluaciones.get(id);
+      stages[m]=ev?computeEval(ev,a,yoyoFor(id,ev)):null;
+    }
+    if(MOMS.some(([m])=>stages[m]))comp.push({aid,a,stages});
+  }
+  const stageValue=(r,m,T)=>r.stages[m]&&r.stages[m].R[T.key]?r.stages[m].R[T.key].val:null;
+  for(const T of cols){
+    doc.addPage();
+    y=pdfHeader(doc,'COMPARATIVO POR ETAPAS · '+T.n+'. '+T.nombre, 'Temporada '+temp+(fRama?' · Rama '+(fRama==='F'?'femenina':'masculina'):''));
+    const eligible=comp.filter(r=>MOMS.some(([m])=>stageValue(r,m,T)!==null&&stageValue(r,m,T)!==undefined));
+    if(!eligible.length){paragraph(doc,'No hay resultados registrados para esta prueba en las etapas seleccionadas.',y);continue}
+    const rowsT=eligible.map(r=>{
+      const pre=stageValue(r,'pre',T),mid=stageValue(r,'mitad',T),fin=stageValue(r,'fin',T);
+      const change=pre!==null&&pre!==undefined&&fin!==null&&fin!==undefined&&pre!==0?changePct(T,fin,pre):null;
+      return {r,pre,mid,fin,change};
+    });
+    const mean=key=>{const v=rowsT.map(x=>x[key]).filter(v=>v!==null&&v!==undefined);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null};
+    const avgPre=mean('pre'),avgMid=mean('mid'),avgFin=mean('fin');
+    const avgChange=avgPre!==null&&avgFin!==null?changePct(T,avgFin,avgPre):null;
+    const bodyT=rowsT.map(x=>['',pdfSafe(x.r.a.nombre),x.pre==null?'—':fmtTest(T,x.pre),x.mid==null?'—':fmtTest(T,x.mid),x.fin==null?'—':fmtTest(T,x.fin),x.change?((x.change.pct>0?'+':'')+x.change.pct.toFixed(1)+'%'):'—']);
+    bodyT.push(['',{content:'Promedio del equipo',styles:{fontStyle:'bold'}},avgPre===null?'—':fmtTest(T,avgPre),avgMid===null?'—':fmtTest(T,avgMid),avgFin===null?'—':fmtTest(T,avgFin),avgChange?((avgChange.pct>0?'+':'')+avgChange.pct.toFixed(1)+'%'):'—']);
+    doc.autoTable({startY:y,head:[['Foto','Atleta','Pretemporada','Mitad de temporada','Fin de temporada','Cambio pre-fin']],body:bodyT,theme:'grid',
+      headStyles:{fillColor:COL.ink,textColor:255,fontSize:9,halign:'center',valign:'middle'},
+      styles:{fontSize:9,cellPadding:2,lineColor:COL.line,lineWidth:0.2,textColor:COL.ink,halign:'center',valign:'middle'},
+      columnStyles:{0:{cellWidth:18},1:{halign:'left',cellWidth:55,fontStyle:'bold'}},
+      didParseCell:d=>{if(d.section==='body'&&d.row.index===bodyT.length-1)d.cell.styles.fillColor=COL.soft},
+      didDrawCell:d=>{if(d.section==='body'&&d.column.index===0&&d.row.index<rowsT.length)pdfAthletePhoto(doc,rowsT[d.row.index].r.a,d.cell.x+2,d.cell.y+1,13,14)}
+    });
+    y=doc.lastAutoTable.finalY+5;
+    const note=T.mejor==='min'?'En esta prueba, un valor menor representa mejor rendimiento.':'En esta prueba, un valor mayor representa mejor rendimiento.';
+    paragraph(doc,note+' El cambio porcentual compara el resultado final con la pretemporada; si falta alguna de esas mediciones, se muestra como no disponible.',y,{size:8.5,color:COL.muted});
+  }
   pdfFooters(doc);
   const name=`Resumen_equipo_${mom}_${temp}.pdf`;pdfSave(doc,name,'xtoast');
 }
