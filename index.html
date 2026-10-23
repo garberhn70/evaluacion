@@ -785,6 +785,12 @@ button,select,input,summary{touch-action:manipulation;-webkit-tap-highlight-colo
         <button class="btn sm" id="pdfTeam">Resumen del equipo (PDF)</button>
       </div>
       <p class="hint">La ficha de cada atleta también se descarga desde su tarjeta, con el botón Ficha en PDF.</p>
+      <div class="panel" style="margin-top:14px;border:1px solid #c95d52">
+        <div class="panel-h"><h3>Zona de administración</h3></div>
+        <p class="hint">Para comenzar una prueba desde cero, puede borrar los atletas, fotografías, evaluaciones y resultados de este registro. Esta acción no se puede deshacer.</p>
+        <button class="btn" id="resetAllData" style="border-color:#c95d52;color:#a62d24">Restablecer toda la información</button>
+        <p class="toast" id="resetAllToast" role="status"></p>
+      </div>
       <p class="toast" id="xtoast"></p>
       <textarea id="csvEvals" hidden readonly aria-label="Evaluaciones en CSV"></textarea>
     </section>
@@ -3505,6 +3511,31 @@ $('pdfAll').onclick=()=>{
 };
 $('pdfTeam').onclick=teamPDF;
 $('pdfRun').onclick=yoyoRunPDF;
+$('resetAllData').onclick=async()=>{
+  const out=$('resetAllToast');
+  if(S.mode==='loading'){out.textContent='Espere a que termine de cargar el registro.';return}
+  if(!confirm('ATENCIÓN: se eliminarán todos los atletas, fotografías, pruebas Yo-Yo, evaluaciones y resultados de la cuenta actual y de este dispositivo. No se puede deshacer. Los respaldos descargados y la licencia no se eliminarán. ¿Desea continuar?'))return;
+  if(prompt('Para confirmar, escriba BORRAR en mayúsculas:')!=='BORRAR'){out.textContent='Operación cancelada. No se borró ningún dato.';return}
+  const btn=$('resetAllData');btn.disabled=true;out.textContent='Borrando información…';
+  try{
+    if(S.mode==='db'){
+      const {error}=await window.vbSupabase.from('app_records').delete().eq('user_id',window.vbUser.id);
+      if(error)throw error;
+    }
+    COLS.forEach(c=>S[c].clear());
+    THR=JSON.parse(JSON.stringify(DEFAULT_THR));
+    NIV=JSON.parse(JSON.stringify(DEFAULT_NIV));
+    local.set('yoyo-registro',{thr:THR,niv:NIV,atletas:{},pruebas:{},evaluaciones:{}});
+    local.set('yoyo-players',[]);
+    local.set('yoyo-sel',{});
+    players=[];resetRun(false);renderThr();renderNivThr();
+    dirtySinceBackup=false;
+    scheduleRender();
+    out.textContent='Información restablecida. El registro está vacío y listo para comenzar las pruebas.';
+  }catch(err){
+    out.textContent='No se pudo completar el borrado. Revise la conexión y vuelva a intentarlo. Detalle: '+(err&&err.message||'error desconocido');
+  }finally{btn.disabled=false}
+};
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
 
 
