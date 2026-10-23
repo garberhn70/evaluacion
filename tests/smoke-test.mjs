@@ -62,6 +62,14 @@ check("Manifiesto JSON y recursos principales están presentes", () => {
   assert.ok(fs.existsSync("icon.svg"), "No existe icon.svg");
 });
 
+check("El código de licencia se lee como texto (no JSON)", () => {
+  assert.doesNotMatch(html, /local\.get\('vb-license-code'/, "La licencia se lee con local.get (JSON.parse) y siempre queda vacía");
+  has(/localStorage\.getItem\('vb-license-code'\)/, "No se encontró la lectura de la licencia");
+});
+check("El tipo de dispositivo se conserva después de recargar", () => has(/localStorage\.setItem\('vb-device-type'/, "El tipo de dispositivo no se guarda"));
+check("«Elegir fotografía» permite usar la galería en celulares", () =>
+  assert.doesNotMatch(html, /id="athletePhotoUpload"[^>]*capture=/, "El selector tiene capture y abre solo la cámara"));
+
 const failed = checks.filter(item => !item.ok);
 for (const result of checks)
   console.log((result.ok ? "PASS" : "FAIL") + "  " + result.name + (result.error ? "\n      " + result.error : ""));

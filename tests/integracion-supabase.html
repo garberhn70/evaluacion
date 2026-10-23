@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pruebas de integración Supabase</title>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#152238;--muted:#5b6b80;--line:#dbe3ef;--ok:#14733d;--bad:#b3261e;--warn:#8a5a00;--acc:#1F4FA3}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,sans-serif;padding:16px}
+main{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:0 0 10px}
+p{margin:4px 0;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.03em}
+input{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;font:inherit}
+button{background:var(--acc);color:#fff;border:0;border-radius:10px;padding:11px 16px;font:700 15px system-ui;cursor:pointer}
+button.sec{background:#e8eef6;color:#17324f}button:disabled{opacity:.5}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left;vertical-align:top}
+th{font-size:12px;color:var(--muted);text-transform:uppercase}
+.st{font-weight:700;white-space:nowrap}.Aprobada{color:var(--ok)}.Fallida{color:var(--bad)}.Omitida{color:var(--warn)}
+.warn{background:#fff4e5;border:1px solid #f0c27a;color:#6b4500;border-radius:12px;padding:10px 12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+code{background:#eef2f7;padding:1px 5px;border-radius:5px}
+</style>
+</head>
+<body>
+<main>
+<section class="card">
+  <h1>Pruebas de integración con Supabase</h1>
+  <p>Comprueba contra el proyecto real lo que no se puede simular: inicio de sesión, licencia, guardado, permisos (RLS) y aislamiento entre cuentas.</p>
+  <p class="warn"><b>Use solo cuentas y licencias de prueba.</b> La página crea registros ficticios con el prefijo <code>prueba-integracion-</code> y los borra al final. No toca ningún otro registro y no ejecuta el restablecimiento total.</p>
+</section>
+
+<section class="card">
+  <h2>Datos de prueba</h2>
+  <div class="grid">
+    <div><label for="url">URL del proyecto</label><input id="url" value="https://hpowcgmaqqbmijnuktpj.supabase.co"></div>
+    <div><label for="key">Clave pública (publishable/anon)</label><input id="key" value="sb_publishable_usgMJpyqzpMd9mb1kH5uMg_X8IUnP4K"></div>
+  </div>
+  <div class="grid" style="margin-top:10px">
+    <div><label for="e1">Correo cuenta A</label><input id="e1" type="email" autocomplete="off"></div>
+    <div><label for="p1">Contraseña cuenta A</label><input id="p1" type="password" autocomplete="off"></div>
+    <div><label for="l1">Licencia de prueba de A</label><input id="l1" type="password" autocomplete="off"></div>
+  </div>
+  <div class="grid" style="margin-top:10px">
+    <div><label for="e2">Correo cuenta B (opcional)</label><input id="e2" type="email" autocomplete="off"></div>
+    <div><label for="p2">Contraseña cuenta B</label><input id="p2" type="password" autocomplete="off"></div>
+  </div>
+  <p style="margin-top:8px">Sin la cuenta B se omiten las pruebas de aislamiento entre cuentas.</p>
+  <div class="row"><button id="run">Ejecutar pruebas</button><button id="dl" class="sec" disabled>Descargar resultados (JSON)</button></div>
+</section>
+
+<section class="card">
+  <h2>Resultados <span id="sum" style="font-weight:400;color:var(--muted)"></span></h2>
+  <table><thead><tr><th>ID</th><th>Prueba</th><th>Esperado</th><th>Obtenido</th><th>Estado</th></tr></thead><tbody id="out"><tr><td colspan="5">Aún no se ejecutan.</td></tr></tbody></table>
+</section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const R=[];
+function add(id,nombre,esperado,obtenido,estado){R.push({id,nombre,esperado,obtenido,estado,fecha:new Date().toISOString(),origen:location.href});draw()}
+function draw(){
+  $('out').innerHTML=R.map(r=>`<tr><td>${r.id}</td><td>${esc(r.nombre)}</td><td>${esc(r.esperado)}</td><td>${esc(r.obtenido)}</td><td class="st ${r.estado}">${r.estado}</td></tr>`).join('');
+  const c=s=>R.filter(r=>r.estado===s).length;$('sum').textContent=`· ${c('Aprobada')} aprobadas, ${c('Fallida')} fallidas, ${c('Omitida')} omitidas`;
+}
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const errMsg=e=>e?(e.message||e.code||JSON.stringify(e)):'';
+async function step(id,nombre,esperado,fn){
+  try{const [ok,obt]=await fn();add(id,nombre,esperado,obt,ok?'Aprobada':'Fallida');return ok}
+  catch(e){add(id,nombre,esperado,'Excepción: '+errMsg(e),'Fallida');return false}
+}
+$('run').onclick=async()=>{
+  if(!window.supabase){alert('No se pudo cargar supabase-js. Revise la conexión.');return}
+  R.length=0;draw();$('run').disabled=true;
+  const url=$('url').value.trim(),key=$('key').value.trim();
+  const mk=()=>window.supabase.createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
+  const anon=mk(),A=mk(),B=mk();
+  const tag='prueba-integracion-'+Date.now();
+  const devA='dispositivo-prueba-'+Math.random().toString(36).slice(2,10);
+  let uidA=null,uidB=null;
+  try{
+    // ---- Sin sesión ----
+    await step('I01','Lectura anónima de app_records','0 filas o error de permisos',async()=>{const {data,error}=await anon.from('app_records').select('user_id').limit(5);return [error||(data||[]).length===0,error?'Error: '+errMsg(error):`${(data||[]).length} filas`]});
+    await step('I02','Lectura anónima de licenses','0 filas o error de permisos',async()=>{const {data,error}=await anon.from('licenses').select('id').limit(5);return [error||(data||[]).length===0,error?'Error: '+errMsg(error):`${(data||[]).length} filas`]});
+    await step('I03','Lectura anónima de license_devices','0 filas o error de permisos',async()=>{const {data,error}=await anon.from('license_devices').select('id').limit(5);return [error||(data||[]).length===0,error?'Error: '+errMsg(error):`${(data||[]).length} filas`]});
+    await step('I04','RPC de licencia sin sesión','Rechazo (sin permiso o «Debes iniciar sesión»)',async()=>{const {data,error}=await anon.rpc('activate_device_license',{p_license_code:'X',p_device_id:devA,p_device_type:'desktop'});return [!!error||(data&&data.ok===false),error?'Error: '+errMsg(error):JSON.stringify(data)]});
+    await step('I05','Inserción anónima en app_records','Rechazo por RLS',async()=>{const {error}=await anon.from('app_records').insert({user_id:'00000000-0000-0000-0000-000000000000',collection:'atletas',record_id:tag+'-anon',data:{}});return [!!error,error?'Rechazada: '+errMsg(error):'¡Se insertó!']});
+    // ---- Cuenta A ----
+    const okA=await step('I06','Inicio de sesión cuenta A','Sesión válida',async()=>{const {data,error}=await A.auth.signInWithPassword({email:$('e1').value.trim(),password:$('p1').value});uidA=data&&data.user&&data.user.id;return [!error&&!!uidA,error?errMsg(error):'Usuario '+uidA]});
+    await step('I07','Contraseña incorrecta','Rechazo',async()=>{const {error}=await mk().auth.signInWithPassword({email:$('e1').value.trim(),password:'incorrecta-'+Date.now()});return [!!error,error?'Rechazada: '+errMsg(error):'¡Entró!']});
+    if(okA){
+      await step('I08','Licencia válida en un dispositivo de prueba','ok: true',async()=>{const {data,error}=await A.rpc('activate_device_license',{p_license_code:$('l1').value.trim(),p_device_id:devA,p_device_type:'desktop'});return [!error&&data&&data.ok===true,error?errMsg(error):JSON.stringify(data)]});
+      await step('I09','Licencia inválida','ok: false',async()=>{const {data,error}=await A.rpc('activate_device_license',{p_license_code:'NO-EXISTE-'+Date.now(),p_device_id:devA,p_device_type:'desktop'});return [!error&&data&&data.ok===false,error?errMsg(error):JSON.stringify(data)]});
+      await step('I10','Guardar registro ficticio','Sin error',async()=>{const {error}=await A.from('app_records').upsert({user_id:uidA,collection:'atletas',record_id:tag,data:{nombre:'Atleta de integración',v:1},updated_at:new Date().toISOString()},{onConflict:'user_id,collection,record_id'});return [!error,error?errMsg(error):'Guardado']});
+      await step('I11','Leer el registro guardado','1 fila con v=1',async()=>{const {data,error}=await A.from('app_records').select('data').eq('user_id',uidA).eq('record_id',tag);return [!error&&data&&data.length===1&&data[0].data.v===1,error?errMsg(error):JSON.stringify(data)]});
+      await step('I12','Actualizar el registro','v=2 al releer',async()=>{await A.from('app_records').upsert({user_id:uidA,collection:'atletas',record_id:tag,data:{nombre:'Atleta de integración',v:2},updated_at:new Date().toISOString()},{onConflict:'user_id,collection,record_id'});const {data,error}=await A.from('app_records').select('data').eq('user_id',uidA).eq('record_id',tag);return [!error&&data&&data[0]&&data[0].data.v===2,error?errMsg(error):JSON.stringify(data)]});
+      await step('I13','Insertar con el user_id de otra persona','Rechazo por RLS',async()=>{const {error}=await A.from('app_records').insert({user_id:'00000000-0000-0000-0000-000000000000',collection:'atletas',record_id:tag+'-ajeno',data:{}});return [!!error,error?'Rechazada: '+errMsg(error):'¡Se insertó!']});
+      await step('I14','Leer licenses estando conectada','0 filas o error (no debe ver códigos)',async()=>{const {data,error}=await A.from('licenses').select('id,code_hash').limit(5);return [error||(data||[]).length===0,error?'Error: '+errMsg(error):`${(data||[]).length} filas`]});
+      await step('I15','Colección no permitida','Rechazo por la restricción check',async()=>{const {error}=await A.from('app_records').insert({user_id:uidA,collection:'otra',record_id:tag+'-col',data:{}});return [!!error,error?'Rechazada: '+errMsg(error):'¡Se insertó!']});
+    }
+    // ---- Cuenta B: aislamiento ----
+    if(okA&&$('e2').value.trim()){
+      const okB=await step('I16','Inicio de sesión cuenta B','Sesión válida',async()=>{const {data,error}=await B.auth.signInWithPassword({email:$('e2').value.trim(),password:$('p2').value});uidB=data&&data.user&&data.user.id;return [!error&&!!uidB&&uidB!==uidA,error?errMsg(error):'Usuario '+uidB]});
+      if(okB){
+        await step('I17','B intenta leer los registros de A','0 filas',async()=>{const {data,error}=await B.from('app_records').select('record_id').eq('user_id',uidA);return [!error&&(data||[]).length===0,error?errMsg(error):`${(data||[]).length} filas visibles`]});
+        await step('I18','B intenta modificar el registro de A','A conserva v=2',async()=>{await B.from('app_records').update({data:{v:999}}).eq('user_id',uidA).eq('record_id',tag);const {data}=await A.from('app_records').select('data').eq('user_id',uidA).eq('record_id',tag);return [data&&data[0]&&data[0].data.v===2,'Valor en A: '+JSON.stringify(data&&data[0]&&data[0].data)]});
+        await step('I19','B intenta borrar el registro de A','El registro de A sigue existiendo',async()=>{await B.from('app_records').delete().eq('user_id',uidA).eq('record_id',tag);const {data}=await A.from('app_records').select('record_id').eq('user_id',uidA).eq('record_id',tag);return [(data||[]).length===1,`Filas de A: ${(data||[]).length}`]});
+        await step('I20','B intenta usar la licencia de A','ok: false («pertenece a otra cuenta»)',async()=>{const {data,error}=await B.rpc('activate_device_license',{p_license_code:$('l1').value.trim(),p_device_id:'dispositivo-prueba-b-'+Date.now(),p_device_type:'mobile'});return [!error&&data&&data.ok===false,error?errMsg(error):JSON.stringify(data)]});
+        await B.auth.signOut();
+      }
+    }else add('I16–I20','Aislamiento entre cuentas','—','No se indicó la cuenta B','Omitida');
+    // ---- Limpieza ----
+    if(okA){
+      await step('I21','Borrar el registro ficticio','0 filas al releer',async()=>{const {error}=await A.from('app_records').delete().eq('user_id',uidA).like('record_id','prueba-integracion-%');const {data}=await A.from('app_records').select('record_id').eq('user_id',uidA).like('record_id','prueba-integracion-%');return [!error&&(data||[]).length===0,error?errMsg(error):`Quedan ${(data||[]).length}`]});
+      await A.auth.signOut();
+    }
+    add('NOTA','Dispositivo de prueba registrado','—',`La prueba I08 registró el dispositivo «${devA}» en license_devices. Si su licencia de prueba permite solo 1 computadora, revóquelo en Supabase (revoked_at) antes de usar otra.`,'Omitida');
+  }finally{$('run').disabled=false;$('dl').disabled=!R.length}
+};
+$('dl').onclick=()=>{const b=new Blob([JSON.stringify(R,null,1)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='resultados-integracion-supabase.json';a.click()};
+</script>
+</body>
+</html>
