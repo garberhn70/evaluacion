@@ -405,9 +405,9 @@ with sync_playwright() as p:
         avg_ok = ('45.0 cm' in blo or '45,0 cm' in blo) and ('48.5 cm' in blo or '48,5 cm' in blo) and ('+7,8' in blo or '+7.8' in blo)
         ana_ok = '+10.0%' in blo or '+10,0%' in blo
         bea_ok = '+5.0%' in blo or '+5,0%' in blo
-        cond = n == 12 and avg_ok and ana_ok and bea_ok
+        cond = n == 13 and avg_ok and ana_ok and bea_ok
         return ('Aprobada' if cond else 'Fallida',
-                f'{n} páginas (resumen + 11 pruebas), {im} imágenes. Bloqueo: Ana 50→55 (+10 %): {ana_ok}; Bea 40→42 (+5 %): {bea_ok}; promedio 45→48,5 (+7,8 %): {avg_ok}', 'evidencia/' + os.path.basename(path))
+                f'{n} páginas (resumen + 12 pruebas), {im} imágenes. Bloqueo: Ana 50→55 (+10 %): {ana_ok}; Bea 40→42 (+5 %): {bea_ok}; promedio 45→48,5 (+7,8 %): {avg_ok}', 'evidencia/' + os.path.basename(path))
     rec('F2', 'F. PDF', 'Informe del equipo y comparativo por etapas', 'Resumen del equipo (fin de temporada) con 2 atletas en pre y fin', '1 página resumen + 1 por prueba; promedios y % correctos', f2)
 
     def f3():
@@ -484,6 +484,67 @@ with sync_playwright() as p:
         return ok(bool(msg) and not dp.is_visible('#athleteCameraVideo'), f'Permiso de cámara negado: «{msg}»', f'Mensaje: {msg}')
     rec('D7', 'D. Fotografías', 'Permiso de cámara denegado', 'Negar el permiso de cámara', 'Mensaje claro', d7)
     dctx.close(); deny.close()
+
+    # ================= N. Normas internacionales por edad y sexo =================
+    m = MockSupabase(); ctx = setup_context(browser, m); nerr = []; pg = open_page(ctx, nerr); login(pg, *U1, LIC)
+    T_N = {'horizontal': ['190', '', ''], 'cmj': ['33.0', '', ''], 's10': ['1.95', '', ''], 'ttest': ['11.0', '']}
+
+    def nueva(nombre, nac, sexo='F'):
+        fill_eval(pg, nombre, vals={'t': T_N}); pg.select_option('#e-sexo', sexo); pg.fill('#e-nac', nac); pg.wait_for_timeout(300)
+
+    def nivel_txt(nombre):
+        aid = [k for k, a in db_rows(m, UID1, 'atletas').items() if a['nombre'] == nombre][0]
+        pg.click('#t-atletas'); pg.wait_for_timeout(400)
+        d = pg.locator(f'details[data-sub="{aid}-lvl"]')
+        par = d.locator('xpath=ancestor::details[1]')
+        if par.count() and not par.evaluate('e=>e.open'): par.locator('summary').first.click(); pg.wait_for_timeout(400)
+        d = pg.locator(f'details[data-sub="{aid}-lvl"]')
+        if not d.evaluate('e=>e.open'): d.locator('summary').first.click(); pg.wait_for_timeout(500)
+        return pg.locator(f'details[data-sub="{aid}-lvl"]').inner_text()
+
+    def n1():
+        pg.click('#t-evaluar'); pg.wait_for_timeout(200); show_all(pg)
+        has = pg.locator('#in-cmj-0').count() == 1 and pg.locator('#in-cmj-2').count() == 1
+        body = pg.inner_text('body')
+        return ok(has and 'Salto vertical CMJ' in body and not nerr, 'La ficha tiene el Salto vertical CMJ con 3 intentos y sin errores de página', f'campos {has}, errores {nerr[:2]}')
+    rec('N1', 'N. Normas', 'Prueba nueva: salto vertical CMJ', 'Abrir la ficha', 'Aparece el CMJ con 3 intentos', n1)
+
+    def n2():
+        nueva('Nora Mayor', '2008-05-10'); save(pg); t = nivel_txt('Nora Mayor')
+        exp = ['Salto horizontal: 190 cm (Bueno · FitBack 2023)', 'Salto vertical CMJ: 32,5 cm' if False else 'Salto vertical CMJ: 33', '(Medio · Voleibol juvenil élite)', 'Sprint 10 m: 1.95 s (Medio · Voleibol femenino de club)', 'T-Test de agilidad: 11.00 s (Bueno · T-test adultos)']
+        miss = [e for e in exp if e not in t and e.replace('.', ',') not in t]
+        return ok(not miss, '18 años, rama femenina: horizontal 190 = Bueno (FitBack), CMJ 33 = Medio, 10 m 1,95 = Medio, T-test 11,0 = Bueno, cada uno con su fuente', f'faltan {miss}; texto: {t[:400]}')
+    rec('N2', 'N. Normas', 'Nivel con norma por edad (18 años)', 'Atleta F nacida en 2008 con horizontal 190, CMJ 33, 10 m 1,95, T-test 11,0', 'Niveles de la norma de 18 años con la fuente', n2)
+
+    def n3():
+        nueva('Nina Juvenil', '2012-03-01')
+        imc = pg.inner_text('body').lower(); imc_ok = 'imc para la edad (oms) z +0.3: normal' in imc or 'imc para la edad (oms) z +0,3: normal' in imc
+        save(pg); t = nivel_txt('Nina Juvenil')
+        exp = ['Salto horizontal: 190 cm (Bueno · FitBack 2023)', 'Sprint 10 m: 1.95 s (Bueno · Voleibol femenino de club)', 'T-Test de agilidad: 11.00 s (Medio)']
+        miss = [e for e in exp if e not in t and e.replace('.', ',') not in t]
+        return ok(not miss and imc_ok, '14 años: horizontal = Bueno (tabla de 14), 10 m = Bueno (Sub-13 a Sub-16), T-test sin norma usa la referencia interna (Medio); IMC 20,8 → z +0,3 normal (OMS)', f'faltan {miss}; IMC OMS {imc_ok}; texto: {t[:300]}')
+    rec('N3', 'N. Normas', 'Norma según la edad (14 años) e IMC OMS', 'Atleta F nacida en 2012 con los mismos valores; peso 60, talla 170', 'Tabla de 14 años; T-test con referencia interna; z de IMC +0,3', n3)
+
+    def n4():
+        pg.click('#t-atletas'); pg.wait_for_timeout(300)
+        box = pg.locator('details.box', has_text='Referencias de nivel físico')
+        if not box.evaluate('e=>e.open'): box.locator('summary').first.click(); pg.wait_for_timeout(300)
+        tabla = box.inner_text(); fuentes = all(x in tabla for x in ['FitBack 2023', 'Voleibol juvenil élite', 'Voleibol femenino de club', 'T-test adultos', 'OMS'])
+        pg.uncheck('#normon-horizontal'); pg.wait_for_timeout(900)
+        t = nivel_txt('Nora Mayor'); interno = 'Salto horizontal: 190 cm (Medio)' in t
+        cfg = db_rows(m, UID1, 'config').get('umbrales', {}); guardado = cfg.get('normOn', {}).get('horizontal') is False
+        pg.reload(); pg.wait_for_timeout(2500); pg.click('#t-atletas'); pg.wait_for_timeout(300)
+        box = pg.locator('details.box', has_text='Referencias de nivel físico'); box.locator('summary').first.click(); pg.wait_for_timeout(300)
+        sigue = not pg.is_checked('#normon-horizontal')
+        pg.check('#normon-horizontal'); pg.wait_for_timeout(600)
+        return ok(fuentes and interno and guardado and sigue, 'Las 4 normas se ven con su fuente; al desmarcar la de salto horizontal se usa la referencia interna (190 = Medio), se guarda en la cuenta y sigue así al recargar', f'fuentes {fuentes}, interno {interno}, guardado {guardado}, tras recargar {sigue}')
+    rec('N4', 'N. Normas', 'Desactivar una norma', 'Referencias de nivel físico: desmarcar Salto horizontal; recargar', 'Vuelve a la referencia interna y se recuerda', n4)
+
+    def n5():
+        nueva('Olga Adulta', '1998-01-15'); b = pg.inner_text('body').lower()
+        return ok('normal' in b and 'imc para la edad (oms)' not in b and not nerr, 'Adulta de 28 años: IMC con categorías de adulto (Normal), sin puntaje OMS; sin errores de página', f'errores {nerr[:2]}')
+    rec('N5', 'N. Normas', 'IMC de adulto', 'Atleta nacida en 1998, peso 60, talla 170', 'Categoría de adulto', n5)
+    ctx.close()
     browser.close()
 
 json.dump(RESULTS, open(os.path.join(HERE, 'resultados.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
