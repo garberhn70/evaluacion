@@ -3252,9 +3252,18 @@ function paragraph(doc,txt,y,opts={}){
   doc.setTextColor(...(opts.color||COL.ink));
   const lines=doc.splitTextToSize(pdfSafe(txt),W-24);y=needSpace(doc,y,lines.length*4.6);doc.text(lines,12,y);return y+lines.length*4.6+1.5;
 }
+function pdfAthletePhoto(doc,a,x,y,w=22,h=25){
+  if(!a||!a.foto)return false;
+  try{doc.addImage(a.foto,'JPEG',x,y,w,h,undefined,'FAST');return true}catch(e){try{doc.addImage(a.foto,x,y,w,h);return true}catch(_){return false}}
+}
+function pdfPhotoLabel(doc,a,x,y,w=22,h=25){
+  doc.setDrawColor(...COL.line);doc.rect(x,y,w,h);
+  if(!pdfAthletePhoto(doc,a,x,y,w,h)){doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(...COL.muted);doc.text('Sin foto',x+w/2,y+h/2,{align:'center'})}
+}
 function fichaPage(doc,aid,temp){
   const a=S.atletas.get(aid)||{},F=fichaOf(aid,temp);
   let y=pdfHeader(doc,'FICHA DE EVALUACIÓN FÍSICA - VOLEIBOL','Temporada '+temp);
+  pdfPhotoLabel(doc,a,doc.internal.pageSize.getWidth()-34,22,22,27);y+=30;
   const lastC=[...MOMS].reverse().map(([m])=>F[m]).find(Boolean);
   const edad=lastC?lastC.C.edad:ageAt(a.nac,todayISO());
   doc.autoTable({startY:y,theme:'plain',styles:{fontSize:9,cellPadding:0.9,textColor:COL.ink},
@@ -3327,23 +3336,24 @@ function teamPDF(){
   const doc=newDoc('landscape');
   let y=pdfHeader(doc,'RESUMEN DEL EQUIPO · EVALUACIÓN FÍSICA',`${MOM_LONG[mom]} · Temporada ${temp}${fRama?' · Rama '+(fRama==='F'?'femenina':'masculina'):''}`);
   const cols=TESTS.map(T=>T);
-  const head=[['Atleta','Edad','IMC',...cols.map(T=>`${T.n}. ${T.nombre.replace('Lanzamiento de balón medicinal','Balón medicinal').replace(' (1RM estimado)',' 1RM').replace('T-Test de agilidad','T-Test').replace(' isométrica','')}\n(${T.unidad})`),'Yo-Yo']];
+  const head=[['Foto','Atleta','Edad','IMC',...cols.map(T=>`${T.n}. ${T.nombre.replace('Lanzamiento de balón medicinal','Balón medicinal').replace(' (1RM estimado)',' 1RM').replace('T-Test de agilidad','T-Test').replace(' isométrica','')}\n(${T.unidad})`),'Yo-Yo']];
   const vals=rows.map(r=>cols.map(T=>r.C.R[T.key].val));
   const best=cols.map((T,j)=>{const v=vals.map(r=>r[j]).filter(x=>x!==null&&x!==undefined);if(!v.length)return null;return T.mejor==='min'?Math.min(...v):Math.max(...v)});
   const body=rows.map((r,i)=>{const yy=r.C.R.yoyo.val;const c=yy!==null&&r.a.sexo?classify('IR1',r.a.sexo,yy):null;
-    return [pdfSafe(r.a.nombre),r.C.edad??'—',r.C.imc?r.C.imc.toFixed(1):'—',...vals[i].map((v,j)=>v===null||v===undefined?'—':fmtN(v,cols[j].dec??0)),c!==null?CLASSES[c]:'—']});
+    return ['',pdfSafe(r.a.nombre),r.C.edad??'—',r.C.imc?r.C.imc.toFixed(1):'—',...vals[i].map((v,j)=>v===null||v===undefined?'—':fmtN(v,cols[j].dec??0)),c!==null?CLASSES[c]:'—']});
   const avg=cols.map((T,j)=>{const v=vals.map(r=>r[j]).filter(x=>x!==null&&x!==undefined);return v.length?fmtN(v.reduce((s,x)=>s+x,0)/v.length,T.dec??0):'—'});
   const imcs=rows.map(r=>r.C.imc).filter(Boolean);
-  body.push([{content:'Promedio del equipo',styles:{fontStyle:'bold'}},'',imcs.length?(imcs.reduce((s,x)=>s+x,0)/imcs.length).toFixed(1):'—',...avg,'']);
+  body.push(['',{content:'Promedio del equipo',styles:{fontStyle:'bold'}},'',imcs.length?(imcs.reduce((s,x)=>s+x,0)/imcs.length).toFixed(1):'—',...avg,'']);
   doc.autoTable({startY:y,head,body,theme:'grid',
     headStyles:{fillColor:COL.ink,textColor:255,fontSize:7.2,halign:'center',valign:'middle'},
     styles:{fontSize:8,cellPadding:1.5,lineColor:COL.line,lineWidth:0.2,textColor:COL.ink,halign:'center',valign:'middle'},
-    columnStyles:{0:{halign:'left',cellWidth:40,fontStyle:'bold'}},
+    columnStyles:{0:{cellWidth:15},1:{halign:'left',cellWidth:38,fontStyle:'bold'}},
     didParseCell:d=>{
       if(d.section!=='body')return;
       if(d.row.index===body.length-1){d.cell.styles.fillColor=COL.soft;return}
-      const j=d.column.index-3;if(j>=0&&j<cols.length&&best[j]!==null&&vals[d.row.index][j]===best[j]){d.cell.styles.textColor=COL.ok;d.cell.styles.fontStyle='bold'}
-    }});
+      const j=d.column.index-4;if(j>=0&&j<cols.length&&best[j]!==null&&vals[d.row.index][j]===best[j]){d.cell.styles.textColor=COL.ok;d.cell.styles.fontStyle='bold'}
+    },
+    didDrawCell:d=>{if(d.section==='body'&&d.column.index===0&&d.row.index<rows.length){pdfAthletePhoto(doc,rows[d.row.index].a,d.cell.x+1,d.cell.y+1,12,13)}}});
   y=doc.lastAutoTable.finalY+5;
   paragraph(doc,'En verde, el mejor resultado del equipo en cada prueba. En sprints y T-Test, menos tiempo es mejor. Saltos de bloqueo y ataque: altura sobre el alcance de pie.',y,{size:8.5,color:COL.muted});
   pdfFooters(doc);
@@ -3352,10 +3362,11 @@ function teamPDF(){
 function yoyoRunPDF(){
   const r=runRows();if(!r.length)return;
   const doc=newDoc();let y=pdfHeader(doc,`PRUEBA YO-YO ${mode}`,'Fecha '+fdate(todayISO()));
-  doc.autoTable({startY:y,head:[['#','Jugador','Nivel','Distancia','VO2máx est.','Clasificación','Estado']],
-    body:r.map((x,i)=>[i+1,pdfSafe(x.name),x.lr,fm(x.d)+' m',x.vo2?x.vo2.toFixed(1):'—',x.c!==null?CLASSES[x.c]:'—',x.estado]),
+  doc.autoTable({startY:y,head:[['#','Foto','Jugador','Nivel','Distancia','VO2máx est.','Clasificación','Estado']],
+    body:r.map((x,i)=>[i+1,'',pdfSafe(x.name),x.lr,fm(x.d)+' m',x.vo2?x.vo2.toFixed(1):'—',x.c!==null?CLASSES[x.c]:'—',x.estado]),
     theme:'grid',headStyles:{fillColor:COL.ink,textColor:255},styles:{fontSize:9.5,lineColor:COL.line,lineWidth:0.2,textColor:COL.ink},
-    columnStyles:{0:{cellWidth:10},3:{halign:'right'},4:{halign:'right'}}});
+    columnStyles:{0:{cellWidth:8},1:{cellWidth:15},4:{halign:'right'},5:{halign:'right'}},
+    didDrawCell:d=>{if(d.section==='body'&&d.column.index===1){const aid=findAthleteByName(r[d.row.index].name);pdfAthletePhoto(doc,aid?S.atletas.get(aid):null,d.cell.x+1,d.cell.y+1,12,13)}}});
   const ds=r.map(x=>x.d);y=doc.lastAutoTable.finalY+5;
   paragraph(doc,`Promedio ${fm(Math.round(ds.reduce((s,v)=>s+v,0)/ds.length))} m · mejor ${fm(Math.max(...ds))} m · ${r.length} jugadores. VO2máx estimado en ml/kg/min.`,y,{size:9,color:COL.muted});
   pdfFooters(doc);const name=`YoYo_${mode}_${todayISO()}.pdf`;pdfSave(doc,name,'toast');
@@ -3385,6 +3396,7 @@ function informePDF(aid){
   const showBase=base.has&&Object.values(L.vals).some(v=>v.mom!=='pre');
   const doc=newDoc(),W=doc.internal.pageSize.getWidth();
   let y=pdfHeader(doc,'INFORME DE NIVEL FÍSICO Y PLAN DE MEJORA',`${pdfSafe(a.nombre)} · Temporada ${fTemp}`);
+  pdfPhotoLabel(doc,a,W-34,22,22,27);y+=30;
   doc.autoTable({startY:y,theme:'plain',styles:{fontSize:9,cellPadding:0.9,textColor:COL.ink},
     columnStyles:{0:{fontStyle:'bold',textColor:COL.muted,cellWidth:30},2:{fontStyle:'bold',textColor:COL.muted,cellWidth:30}},
     body:[['Atleta',pdfSafe(a.nombre),'Posición',pdfSafe(a.posicion||'—')],
