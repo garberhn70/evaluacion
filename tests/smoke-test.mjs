@@ -70,6 +70,16 @@ check("El tipo de dispositivo se conserva después de recargar", () => has(/loca
 check("«Elegir fotografía» permite usar la galería en celulares", () =>
   assert.doesNotMatch(html, /id="athletePhotoUpload"[^>]*capture=/, "El selector tiene capture y abre solo la cámara"));
 
+check("Trabajo sin conexión: copia local, cola y sincronización", () => {
+  has(/function vbFlushQueue\s*\(/, "No se encontró la subida de la cola");
+  has(/function vbTryOffline\s*\(/, "No se encontró la entrada sin conexión");
+  has(/addEventListener\('online'/, "No se sincroniza al volver la conexión");
+});
+check("supabase-js con versión fija, huella SRI y guardado por el service worker", () => {
+  has(/<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2\.118\.0\/dist\/umd\/supabase\.js" integrity="sha384-[A-Za-z0-9+\/=]+" crossorigin="anonymous"><\/script>/, "La librería no tiene versión fija con SRI");
+  assert.match(fs.readFileSync("sw.js", "utf8"), /supabase-js@2\.118\.0\/dist\/umd\/supabase\.js/, "El service worker no guarda la librería");
+});
+
 const failed = checks.filter(item => !item.ok);
 for (const result of checks)
   console.log((result.ok ? "PASS" : "FAIL") + "  " + result.name + (result.error ? "\n      " + result.error : ""));

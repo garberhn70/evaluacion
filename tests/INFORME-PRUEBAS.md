@@ -1,43 +1,47 @@
 # Informe de pruebas — rama `supabase-integration-prep`
 
-Fecha: 23/10/2026 · Base probada: commit `ef0ab54` + correcciones de este informe · Navegador: Chromium (Playwright)
+Fecha: 23/10/2026 · Navegador: Chromium (Playwright) · Supabase **simulado** (`tests/e2e/mock_supabase.py`)
 
-**Resumen:** 32 aprobadas · 2 fallidas · 2 bloqueadas · 36 en total.
+**Resumen:** 41 aprobadas · 0 fallidas · 2 bloqueadas · 43 en total.
 
-> Las pruebas automáticas usan un **Supabase simulado** (`tests/e2e/mock_supabase.py`). Prueban el código del navegador
-> (sesión, licencia, guardado, fotos, PDF, restablecimiento, fallos de red), **no** las políticas reales de la base.
-> Las pruebas contra el proyecto real están en `tests/integracion-supabase.html` y quedan **bloqueadas** hasta que se ejecuten
-> con cuentas de prueba.
+> Las pruebas automáticas prueban el código del navegador (sesión, licencia, guardado, trabajo sin conexión, fotos, PDF,
+> restablecimiento y fallos de red). **No** prueban las políticas reales de la base: para eso está
+> `tests/integracion-supabase.html`, que se ejecuta con cuentas de prueba (E6 y E7 siguen bloqueadas hasta entonces).
 
 ## Errores encontrados y corregidos
 
-| # | Problema | Causa | Corrección | Prueba que lo confirma |
+| # | Problema | Causa | Corrección | Prueba |
 |---|---|---|---|---|
-| 1 | Después de iniciar sesión la app **siempre volvía a pedir la licencia**; nunca se llegaba a la base de datos | El código se guardaba como texto simple y se leía con `local.get`, que espera JSON: la lectura fallaba y devolvía vacío | Leer `vb-license-code` con `localStorage.getItem` | A1, A2 (antes fallaban) |
-| 2 | En iPad/celular el dispositivo se registraba como **computadora** y ocupaba ese cupo | El tipo elegido no se guardaba; al recargar volvía a «Computadora» | Se guarda `vb-device-type` al iniciar sesión y se detecta automáticamente en celulares/iPad | A7 |
-| 3 | «Elegir fotografía» en iPad/celular **abría solo la cámara**, sin galería | `capture="user"` en el selector de archivo | Se quitó `capture` (la cámara sigue en «Tomar fotografía») | D4 |
-| 4 | La foto de un atleta nuevo **se perdía** al cambiar momento o temporada antes de guardar | `loadEvalForm` reiniciaba la foto en cada cambio | Solo se reinicia al cambiar de atleta | D5 |
-| 5 | En el comparativo del equipo el promedio aparecía redondeado (45 → 49) con un % calculado sin redondear (+7,8 %) | Promedios con 0 decimales | Promedios con un decimal más (45,0 → 48,5) | F2 |
-| 6 | Mensajes de cámara en inglés («Requested device not found») | Se mostraba el error del navegador | Mensajes en español para permiso negado, sin cámara y cámara ocupada | D7 |
+| 1 | Después de iniciar sesión la app **siempre volvía a pedir la licencia** | El código se guardaba como texto y se leía como JSON | Lectura con `localStorage.getItem` | A1, A2 |
+| 2 | iPad/celular quedaba registrado como **computadora** | El tipo de dispositivo no se guardaba | Se guarda `vb-device-type` y se detecta solo | A7 |
+| 3 | «Elegir fotografía» en iPad/celular **abría solo la cámara** | `capture="user"` | Se quitó `capture` | D4 |
+| 4 | Se perdía la foto de un atleta nuevo al cambiar momento/temporada | La foto se reiniciaba en cada cambio | Solo se reinicia al cambiar de atleta | D5 |
+| 5 | Promedio del comparativo redondeado (45 → 49) con % sin redondear | 0 decimales en promedios | Un decimal más | F2 |
+| 6 | Mensajes en inglés (cámara, inicio de sesión) | Se mostraba el error técnico | Mensajes en español | A4, A10, D7 |
+| 7 | **Sin internet la app no se podía usar** y mostraba datos viejos | La pantalla de acceso bloqueaba todo y no había copia de la nube en el equipo | **Modo sin conexión** (abajo) | O1–O7, E2, E3 |
+| 8 | `supabase-js` se cargaba de la CDN sin versión fija y no funcionaba sin internet | `@supabase/supabase-js@2` externo | Versión fija `2.118.0` con huella SRI; el service worker la guarda para usarla sin conexión | O8 y estática |
 
-Se agregaron 3 comprobaciones a `tests/smoke-test.mjs` para que estos errores no vuelvan (15/15 aprobadas).
+## Modo sin conexión (nuevo)
 
-## Pendiente de decisión (no corregido)
+- Al trabajar conectado, el equipo guarda una copia de los datos de la cuenta.
+- Si al abrir no hay internet, la app entra con esa copia (si la licencia se validó en ese equipo en los últimos **30 días**).
+- Lo que se registra o borra sin internet queda en una **cola** y se sube solo al volver la conexión (gana el último cambio de cada registro).
+- El estado muestra «Sin conexión · N cambios por subir».
+- Sin conexión no se permite «Restablecer toda la información».
+- «Cerrar sesión» avisa si hay cambios sin subir.
+- La primera vez en un equipo sí se necesita internet.
 
-1. **Sin internet la app queda inutilizable (A10, E5).** La pantalla de acceso tapa toda la aplicación y no tiene opción de
-   continuar. Además, en modo nube no se guarda copia local: sin conexión, detrás aparecen datos antiguos del equipo, no lo
-   trabajado en la nube. Para canchas sin internet esto es crítico. Propuesta: guardar una copia local de lo descargado de la
-   nube y agregar «Trabajar sin conexión (solo lectura)» o con cola de cambios. Afecta la regla de licencias, por eso necesita
-   su aprobación.
-2. **La licencia no se exige en la base de datos.** Las políticas RLS de `app_records` solo comparan `auth.uid() = user_id`.
-   Cualquier cuenta nueva (el alta está abierta) puede leer y escribir sus propios registros por la API sin licencia.
-   Propuesta en `supabase/propuestas/PROPUESTA_licencia_en_rls.sql` (**no aplicada**).
-3. **Un dispositivo revocado se reactiva solo** al volver a abrir la app (`on conflict … revoked_at = null`). Incluido en la misma propuesta.
-4. **`supabase-js` se carga desde la CDN sin versión fija** (`@supabase/supabase-js@2`) y el service worker no lo guarda.
-   Recomendado fijar la versión (por ejemplo `@2.118.0`) y decidir si se guarda para uso sin conexión.
-5. **El restablecimiento no borra la copia en Google Drive** (respaldo automático de la versión publicada). Es razonable como
-   respaldo, pero «Traer último respaldo de la nube» podría devolver los datos borrados. Confirmar si es lo deseado.
-6. **Realtime** no se pudo probar en vivo (simulado solo con recarga, E4).
+## Decisiones tomadas (se pueden cambiar)
+
+- Sin conexión se puede **ver y registrar**; límite de 30 días sin validar licencia.
+- El restablecimiento **no** borra la copia de Google Drive; el aviso de confirmación lo dice.
+
+## Pendiente (requiere acción del administrador)
+
+1. Ejecutar `tests/integracion-supabase.html` con dos cuentas y una licencia de prueba (E6, E7).
+2. Revisar y aplicar `supabase/propuestas/PROPUESTA_licencia_en_rls.sql`: hoy la base no exige licencia (solo la pantalla) y un
+   dispositivo revocado se reactiva solo. **No aplicada.**
+3. Realtime en vivo no se pudo simular (E4 se comprobó con recarga).
 
 ## Resultados
 
@@ -46,13 +50,13 @@ Se agregaron 3 comprobaciones a `tests/smoke-test.mjs` para que estos errores no
 | A1 | Inicio de sesión válido con licencia válida | Entra a la app, estado «Conectado a la base de datos centralizada» | Puerta visible al abrir: True. Tras iniciar: puerta visible=False, estado='Conectado a la base de datos centralizada'. Corrección aplicada antes: lectura del código de licencia. | **Aprobada** |
 | A2 | Persistencia de sesión al recargar | Sigue conectado | Tras recargar sigue conectado sin volver a pedir datos | **Aprobada** |
 | A3 | Cierre de sesión | Vuelve a la pantalla de acceso | Vuelve la pantalla de acceso; el código de licencia guardado se borra | **Aprobada** |
-| A4 | Rechazo de credenciales incorrectas | Mensaje de error, no entra | Rechazada con mensaje: «Invalid login credentials» | **Aprobada** |
+| A4 | Rechazo de credenciales incorrectas | Mensaje de error, no entra | Rechazada con mensaje: «Correo o contraseña incorrectos.» | **Aprobada** |
 | A5 | Rechazo de licencia inválida | No entra; «Código de licencia no válido.» | Rechazada: «Código de licencia no válido.» | **Aprobada** |
 | A6 | Licencia vencida | No entra; mensaje de vigencia | Rechazada: «Licencia vencida o fuera de vigencia.» | **Aprobada** |
 | A7 | Límite de dispositivos | 2.ª computadora rechazada; celular aceptado | Segunda computadora: «Ya se alcanzó el límite de dispositivos de este tipo. Libera uno o contacta al administrador.». Un celular con la misma licencia: entra (cupo 1 computadora + 1 celular). | **Aprobada** |
 | A8 | Licencia de otra cuenta | Rechazo «pertenece a otra cuenta» | Rechazada: «La licencia pertenece a otra cuenta.» | **Aprobada** |
 | A9 | Error del servidor al validar licencia | No entra y muestra el error | Error 500 del servidor: queda en la pantalla de acceso con «Error interno simulado» y estado «Licencia no validada»; no se muestra como éxito. | **Aprobada** |
-| A10 | Uso sin internet (sin acceso a Supabase) | Poder seguir trabajando o al menos ver los datos guardados | Sin conexión a la CDN de Supabase: estado «Modo local: configure la conexión para sincronizar», mensaje al iniciar «No se pudo cargar Supabase JS. Compruebe Internet.». La pantalla de acceso tapa toda la app y no hay opción para trabajar sin conexión, aunque los datos locales están cargados detrás. | **Fallida** |
+| A10 | Primer uso sin internet | No entra y explica el motivo | Primer uso sin internet (sin copia previa): sigue la pantalla de acceso con el mensaje «No hay conexión a internet. La primera vez en este equipo se necesita internet para validar la cuenta y la licencia.». Es lo esperado: la primera vez hay que validar la cuenta y la licencia con conexión. | **Aprobada** |
 | B1 | Campo obligatorio: nombre | Mensaje y nada guardado | Sin nombre: «Escriba el nombre del atleta.»; no se creó ningún registro | **Aprobada** |
 | B2 | Crear atleta y guardar sin duplicados | Un solo atleta y una sola evaluación | 1 atleta y 1 evaluación en la base simulada tras doble toque en Guardar; mensaje «Guardado: Atleta Ficticia Uno, pretemporada (línea base) 2026.» | **Aprobada** |
 | C1 | Fórmulas con valores conocidos | Coinciden con el cálculo manual | Todos los resultados coinciden con el cálculo manual: bloqueo 265−215=50 cm (potencia 60,7·50+45,3·60−2055=3.698 W), ataque 285−220=65 cm, sentadilla Brzycki 60·36/(37−5)=67,5→68 kg, IMC 60/1,7²=20,8. | **Aprobada** |
@@ -64,10 +68,17 @@ Se agregaron 3 comprobaciones a `tests/smoke-test.mjs` para que estos errores no
 | D4 | «Elegir fotografía» en celular/iPad | Permite elegir de la galería | Sin atributo capture | **Aprobada** |
 | D5 | Foto de atleta nuevo al cambiar momento | La foto se mantiene | La foto se conserva al cambiar el momento | **Aprobada** |
 | B4 | Eliminar atleta de prueba | Desaparece de la base y de la pantalla | Atleta y sus evaluaciones borrados de la base; no reaparecen al recargar | **Aprobada** |
-| E2 | Corte de conexión al guardar | Mensaje de error, sin falso éxito | Con la conexión cortada al guardar: «No se pudo guardar. Revise la conexión e intente de nuevo.». No se muestra como guardado. | **Aprobada** |
-| E3 | Recuperación al volver la conexión | Se guarda | Al volver la conexión y guardar de nuevo: «Guardado: Atleta Sin Red, pretemporada (línea base) 2026.» | **Aprobada** |
+| E2 | Corte de conexión al guardar | Se guarda en este equipo, queda en cola y se avisa | Con la conexión cortada al guardar: «Guardado: Atleta Sin Red, pretemporada (línea base) 2026. Quedó en este equipo y se subirá a la nube al volver internet.». Pendientes en la cola: 2. Estado: «Sin conexión: trabajando con la copia de este equipo · 2 cambios por subir. Se sincroniza al volver internet.». Nada llegó a la nube todavía (0). | **Aprobada** |
+| E3 | Sincronización al volver la conexión | La cola se sube sola | Al volver la conexión se subió solo: en la nube 1, en cola 0, estado «Conectado a la base de datos centralizada» | **Aprobada** |
 | E4 | Cambios de otra sesión | Aparece | Un cambio hecho en otra sesión aparece al recargar (Realtime en vivo no se puede simular aquí) | **Aprobada** |
-| E5 | Abrir la app sin conexión tras trabajar en la nube | Ver los datos más recientes o un aviso claro | Sin conexión al abrir: estado «Licencia no validada», pantalla de acceso tapando la app: True. Atletas cargados detrás: los antiguos/locales, NO los de la nube. En modo nube no se guarda copia local, así que sin internet no se puede ver lo trabajado. | **Fallida** |
+| O1 | Abrir la app sin internet tras trabajar en la nube | Abre con la copia de este equipo | Sin internet al abrir: pantalla de acceso visible=False; estado «Sin conexión: trabajando con la copia de este equipo. Se sincroniza al volver internet.»; atletas de la nube disponibles: sí | **Aprobada** |
+| O2 | Registrar sin internet | Se guarda en el equipo y queda en cola | Evaluación nueva sin internet: «Guardado: Atleta Offline, pretemporada (línea base) 2026. Quedó en este equipo y se subirá a la nube al volver internet.»; en cola 2 | **Aprobada** |
+| O3 | Borrar sin internet | Se borra en el equipo y queda en cola | Borrado sin internet: desaparece en el equipo y queda en cola (la nube aún lo tiene) | **Aprobada** |
+| O4 | Restablecer sin internet | No se permite | «Para restablecer se necesita conexión a internet. Conéctese e intente de nuevo.» | **Aprobada** |
+| O5 | Cerrar sesión con cambios sin subir | Avisa y no pierde cambios | Con 4 cambios sin subir, «Cerrar sesión» pide confirmación; al cancelar sigue dentro y no se pierde nada | **Aprobada** |
+| O6 | Subir lo hecho sin internet | Altas y borrados llegan a la nube | Al volver internet: se subió el atleta nuevo y se aplicó el borrado; cola 0; estado «Conectado a la base de datos centralizada»; tras recargar coincide: True | **Aprobada** |
+| O7 | Límite de días sin conexión | Pide conexión | Con la última validación de licencia de hace 31 días, sin internet no deja entrar (límite: 30 días) | **Aprobada** |
+| O8 | Sin internet ni librería en caché | Abre con la copia del equipo | Sin internet y sin poder cargar la librería: entra con la copia del equipo («Sin conexión: trabajando con la copia de este equipo. Se sin…») | **Aprobada** |
 | E6 | Aislamiento real entre cuentas (RLS) | — | Necesita dos cuentas de prueba en el Supabase real. Desde aquí no tengo permiso para conectarme a su proyecto. | **Bloqueada** |
 | E7 | Permisos de licencias y license_devices | — | Necesita el Supabase real (políticas y función activate_device_license). | **Bloqueada** |
 | F1 | Ficha individual con foto | Nombre, foto, valores y % correctos | Ficha_Ana_Ficticia_2026.pdf: 2 página(s), 1 imagen(es). Bloqueo pre 50 cm, fin 55 cm y cambio +10 % presentes: True | **Aprobada** |
@@ -83,6 +94,5 @@ Se agregaron 3 comprobaciones a `tests/smoke-test.mjs` para que estos errores no
 ## Cómo repetir
 
 - Pruebas automáticas: `tests/e2e/README.md`.
-- Pruebas contra Supabase real: abrir `tests/integracion-supabase.html` con `iniciar-pruebas.bat`
-  (`http://127.0.0.1:8787/tests/integracion-supabase.html`), escribir dos cuentas de prueba y una licencia de prueba.
+- Contra Supabase real: `iniciar-pruebas.bat` y abrir `http://127.0.0.1:8787/tests/integracion-supabase.html`.
 - Datos crudos: `tests/resultados-automaticos.json`.
