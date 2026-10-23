@@ -1,0 +1,26 @@
+name: Validación estática de la aplicación
+
+on:
+  push:
+    branches:
+      - supabase-integration-prep
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  static-smoke-tests:
+    name: Sintaxis y controles críticos
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Ejecutar comprobaciones estáticas
+        run: node tests/smoke-test.mjs
