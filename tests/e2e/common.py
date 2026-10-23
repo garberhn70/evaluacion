@@ -7,7 +7,7 @@ EVAL_INIT="try{localStorage.setItem('yoyo-evaluador',JSON.stringify({nombre:'Eva
 def setup_context(browser, mock, sbjs=True, **kw):
     ctx=browser.new_context(viewport={'width':1100,'height':900}, accept_downloads=True, **kw)
     ctx.add_init_script(EVAL_INIT)
-    if sbjs: ctx.route('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2', lambda r: r.fulfill(path=SBJS, content_type='application/javascript'))
+    if sbjs: ctx.route('**/supabase-js@2.118.0/dist/umd/supabase.js', lambda r: r.fulfill(path=SBJS, content_type='application/javascript', headers={'access-control-allow-origin': '*'}))
     else: ctx.route('https://cdn.jsdelivr.net/**', lambda r: r.abort('internetdisconnected'))
     ctx.route('https://fonts.googleapis.com/**', lambda r: r.abort())
     ctx.route('https://fonts.gstatic.com/**', lambda r: r.abort())

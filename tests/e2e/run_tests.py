@@ -125,7 +125,7 @@ with sync_playwright() as p:
     def a4():
         login(pg, U1[0], 'Contraseña-incorrecta', LIC)
         msg = pg.text_content('#cloudAuthMessage')
-        return ok(pg.is_visible('#cloudAuthGate') and 'Invalid login credentials' in msg, f"Rechazada con mensaje: «{msg}»", f'No se rechazó correctamente: {msg}')
+        return ok(pg.is_visible('#cloudAuthGate') and 'incorrectos' in msg, f"Rechazada con mensaje: «{msg}»", f'No se rechazó correctamente: {msg}')
     rec('A4', 'A. Sesión y licencia', 'Rechazo de credenciales incorrectas', 'Contraseña incorrecta', 'Mensaje de error, no entra', a4)
 
     def a5():
@@ -163,12 +163,10 @@ with sync_playwright() as p:
     ctx.close()
 
     def a10():
-        c5 = setup_context(browser, MockSupabase(), sbjs=False); e5 = []; p5 = open_page(c5, e5)
-        gate = p5.is_visible('#cloudAuthGate'); note = p5.text_content('#storeNote')
-        p5.click('#cloudSignIn'); p5.wait_for_timeout(400); msg = p5.text_content('#cloudAuthMessage'); s = shot(p5, 'A10_sin_libreria_supabase'); c5.close()
-        return ('Fallida' if gate else 'Aprobada',
-                f'Sin conexión a la CDN de Supabase: estado «{note}», mensaje al iniciar «{msg}». La pantalla de acceso tapa toda la app y no hay opción para trabajar sin conexión, aunque los datos locales están cargados detrás.', s)
-    rec('A10', 'A. Sesión y licencia', 'Uso sin internet (sin acceso a Supabase)', 'Abrir la app sin poder descargar supabase-js', 'Poder seguir trabajando o al menos ver los datos guardados', a10)
+        mm = MockSupabase(); mm.fail.add('all'); c5 = setup_context(browser, mm); p5 = open_page(c5)
+        login(p5, *U1, LIC); gate = p5.is_visible('#cloudAuthGate'); msg = p5.text_content('#cloudAuthMessage'); s = shot(p5, 'A10_primer_uso_sin_internet'); c5.close()
+        return ('Aprobada' if gate and 'conexión a internet' in msg else 'Fallida', f'Primer uso sin internet (sin copia previa): sigue la pantalla de acceso con el mensaje «{msg}». Es lo esperado: la primera vez hay que validar la cuenta y la licencia con conexión.', s)
+    rec('A10', 'A. Sesión y licencia', 'Primer uso sin internet', 'Equipo nuevo, sin conexión, intenta iniciar sesión', 'No entra y explica el motivo', a10)
 
     # ================= B, C, D, E con usuario 1 conectado =================
     m = MockSupabase()
@@ -276,14 +274,17 @@ with sync_playwright() as p:
     def e2():
         fill_eval(pg, 'Atleta Sin Red'); m.fail.add('upsert'); t = save(pg); m.fail.discard('upsert')
         n = len([1 for a in db_rows(m, UID1, 'atletas').values() if a.get('nombre') == 'Atleta Sin Red'])
-        s = shot(pg, 'E2_guardado_sin_red')
-        return ('Aprobada' if 'No se pudo guardar' in t and n == 0 else 'Fallida', f'Con la conexión cortada al guardar: «{t}». No se muestra como guardado.', s)
-    rec('E2', 'E. Supabase', 'Corte de conexión al guardar', 'Cortar la red justo al guardar', 'Mensaje de error, sin falso éxito', e2)
+        q = pg.evaluate('window.vbPendingCount()'); note = pg.text_content('#storeNote'); s = shot(pg, 'E2_guardado_sin_red')
+        return ('Aprobada' if 'se subirá' in t and n == 0 and q >= 1 and 'Sin conexión' in note else 'Fallida',
+                f'Con la conexión cortada al guardar: «{t}». Pendientes en la cola: {q}. Estado: «{note}». Nada llegó a la nube todavía ({n}).', s)
+    rec('E2', 'E. Supabase', 'Corte de conexión al guardar', 'Cortar la red justo al guardar', 'Se guarda en este equipo, queda en cola y se avisa', e2)
 
     def e3():
-        t = save(pg); n = len([1 for a in db_rows(m, UID1, 'atletas').values() if a.get('nombre') == 'Atleta Sin Red'])
-        return ok(n == 1 and 'Guardado' in t, f'Al volver la conexión y guardar de nuevo: «{t}»', f'{t}, registros {n}')
-    rec('E3', 'E. Supabase', 'Recuperación al volver la conexión', 'Guardar otra vez con red', 'Se guarda', e3)
+        pg.evaluate("window.dispatchEvent(new Event('online'))"); pg.wait_for_timeout(3500)
+        n = len([1 for a in db_rows(m, UID1, 'atletas').values() if a.get('nombre') == 'Atleta Sin Red'])
+        q = pg.evaluate('window.vbPendingCount()'); note = pg.text_content('#storeNote')
+        return ok(n == 1 and q == 0 and 'Conectado' in note, f'Al volver la conexión se subió solo: en la nube {n}, en cola {q}, estado «{note}»', f'nube {n}, cola {q}, estado {note}')
+    rec('E3', 'E. Supabase', 'Sincronización al volver la conexión', 'Volver a tener internet', 'La cola se sube sola', e3)
 
     def e4():
         c2_ = setup_context(browser, m); p2 = open_page(c2_)
@@ -296,15 +297,66 @@ with sync_playwright() as p:
         return ok(seen, 'Un cambio hecho en otra sesión aparece al recargar (Realtime en vivo no se puede simular aquí)', 'No apareció')
     rec('E4', 'E. Supabase', 'Cambios de otra sesión', 'Segunda sesión crea atleta; la primera recarga', 'Aparece', e4)
 
-    def e5():
-        pg.click('#t-atletas'); pg.wait_for_timeout(300)
-        m.fail.add('all'); pg.reload(); pg.wait_for_timeout(2500); m.fail.discard('all')
+    def o1():
+        m.fail.add('all'); pg.reload(); pg.wait_for_timeout(2500)
         note = pg.text_content('#storeNote'); gate = pg.is_visible('#cloudAuthGate'); opts = pg.inner_text('#e-atleta')
-        s = shot(pg, 'E5_sin_red_al_abrir')
-        stale = 'Atleta Sin Red' not in opts
-        return ('Fallida' if gate or stale else 'Aprobada',
-                f'Sin conexión al abrir: estado «{note}», pantalla de acceso tapando la app: {gate}. Atletas cargados detrás: {"los antiguos/locales, NO los de la nube" if stale else "los de la nube"}. En modo nube no se guarda copia local, así que sin internet no se puede ver lo trabajado.', s)
-    rec('E5', 'E. Supabase', 'Abrir la app sin conexión tras trabajar en la nube', 'Trabajar conectado y luego abrir sin red', 'Ver los datos más recientes o un aviso claro', e5)
+        s = shot(pg, 'O1_abrir_sin_internet')
+        return ('Aprobada' if not gate and 'Atleta Sin Red' in opts and 'Sin conexión' in note else 'Fallida',
+                f'Sin internet al abrir: pantalla de acceso visible={gate}; estado «{note}»; atletas de la nube disponibles: {"sí" if "Atleta Sin Red" in opts else "no"}', s)
+    rec('O1', 'O. Sin conexión', 'Abrir la app sin internet tras trabajar en la nube', 'Trabajar conectado, cortar internet y recargar', 'Abre con la copia de este equipo', o1)
+
+    def o2():
+        fill_eval(pg, 'Atleta Offline'); t = save(pg); q = pg.evaluate('window.vbPendingCount()')
+        n = len([1 for a in db_rows(m, UID1, 'atletas').values() if a.get('nombre') == 'Atleta Offline'])
+        return ok('se subirá' in t and q >= 1 and n == 0, f'Evaluación nueva sin internet: «{t}»; en cola {q}', f'{t} / cola {q} / nube {n}')
+    rec('O2', 'O. Sin conexión', 'Registrar sin internet', 'Crear atleta y evaluación sin conexión', 'Se guarda en el equipo y queda en cola', o2)
+
+    def o3():
+        aid = [k for k, a in db_rows(m, UID1, 'atletas').items() if a.get('nombre') == 'Atleta Sin Red'][0]
+        pg.click('#t-atletas'); pg.wait_for_timeout(300)
+        if not pg.evaluate(f"document.querySelector('details.ath[data-aid=\"{aid}\"]').open"):
+            pg.locator(f'details.ath[data-aid="{aid}"] > summary').first.click(); pg.wait_for_timeout(300)
+        pg.locator(f'[data-delath="{aid}"]').first.click(); pg.wait_for_timeout(300); pg.locator(f'[data-delath="{aid}"]').first.click(); pg.wait_for_timeout(800)
+        gone = pg.locator(f'details.ath[data-aid="{aid}"]').count() == 0; still = aid in db_rows(m, UID1, 'atletas')
+        return ok(gone and still, 'Borrado sin internet: desaparece en el equipo y queda en cola (la nube aún lo tiene)', f'pantalla {gone}, nube {still}')
+    rec('O3', 'O. Sin conexión', 'Borrar sin internet', 'Borrar un atleta sin conexión', 'Se borra en el equipo y queda en cola', o3)
+
+    def o4():
+        pg.click('#t-atletas'); pg.wait_for_timeout(200); pg.click('#resetAllData'); pg.wait_for_timeout(400); t = pg.text_content('#resetAllToast')
+        return ok('necesita conexión' in t, f'«{t}»', t)
+    rec('O4', 'O. Sin conexión', 'Restablecer sin internet', 'Tocar Restablecer sin conexión', 'No se permite', o4)
+
+    def o5():
+        q0 = pg.evaluate('window.vbPendingCount()'); pg.click('#cloudSignOut'); pg.wait_for_timeout(800)
+        still = not pg.is_visible('#cloudAuthGate') and pg.evaluate('window.vbPendingCount()') == q0
+        return ok(still and q0 > 0, f'Con {q0} cambios sin subir, «Cerrar sesión» pide confirmación; al cancelar sigue dentro y no se pierde nada', f'cola {q0}, sigue dentro {still}')
+    rec('O5', 'O. Sin conexión', 'Cerrar sesión con cambios sin subir', 'Cerrar sesión y cancelar el aviso', 'Avisa y no pierde cambios', o5)
+
+    def o6():
+        m.fail.discard('all'); pg.evaluate("window.dispatchEvent(new Event('online'))"); pg.wait_for_timeout(4000)
+        names = [a.get('nombre') for a in db_rows(m, UID1, 'atletas').values()]
+        q = pg.evaluate('window.vbPendingCount()'); note = pg.text_content('#storeNote')
+        cond = 'Atleta Offline' in names and 'Atleta Sin Red' not in names and q == 0 and 'Conectado' in note
+        pg.reload(); pg.wait_for_timeout(1800); opts = pg.inner_text('#e-atleta')
+        cond = cond and 'Atleta Offline' in opts and 'Atleta Sin Red' not in opts
+        return ('Aprobada' if cond else 'Fallida', f'Al volver internet: se subió el atleta nuevo y se aplicó el borrado; cola {q}; estado «{note}»; tras recargar coincide: {cond}', shot(pg, 'O6_sincronizado'))
+    rec('O6', 'O. Sin conexión', 'Subir lo hecho sin internet', 'Volver a tener conexión', 'Altas y borrados llegan a la nube', o6)
+
+    def o7():
+        pg.evaluate("(()=>{const o=JSON.parse(localStorage.getItem('vb-offline-user'));o.licOk=Date.now()-31*864e5;localStorage.setItem('vb-offline-user',JSON.stringify(o))})()")
+        m.fail.add('all'); pg.reload(); pg.wait_for_timeout(2500); gate = pg.is_visible('#cloudAuthGate'); m.fail.discard('all')
+        return ok(gate, 'Con la última validación de licencia de hace 31 días, sin internet no deja entrar (límite: 30 días)', 'Entró con la licencia vencida en modo sin conexión')
+    rec('O7', 'O. Sin conexión', 'Límite de días sin conexión', 'Última validación hace 31 días y sin internet', 'Pide conexión', o7)
+
+    def o8():
+        pg.evaluate("(()=>{const o=JSON.parse(localStorage.getItem('vb-offline-user'));o.licOk=Date.now();localStorage.setItem('vb-offline-user',JSON.stringify(o))})()")
+        ctx.route('**/supabase-js@2.118.0/dist/umd/supabase.js', lambda r: r.abort('internetdisconnected'))
+        m.fail.add('all'); pg.reload(); pg.wait_for_timeout(2500)
+        gate = pg.is_visible('#cloudAuthGate'); note = pg.text_content('#storeNote'); opts = pg.inner_text('#e-atleta')
+        m.fail.discard('all'); ctx.unroute('**/supabase-js@2.118.0/dist/umd/supabase.js')
+        ctx.route('**/supabase-js@2.118.0/dist/umd/supabase.js', lambda r: r.fulfill(path=SBJS, content_type='application/javascript', headers={'access-control-allow-origin': '*'}))
+        return ok(not gate and 'Sin conexión' in note and 'Atleta Offline' in opts, f'Sin internet y sin poder cargar la librería: entra con la copia del equipo («{note[:60]}…»)', f'puerta {gate}, estado {note}')
+    rec('O8', 'O. Sin conexión', 'Sin internet ni librería en caché', 'Cortar internet y la CDN; recargar', 'Abre con la copia del equipo', o8)
 
     blocked('E6', 'E. Supabase', 'Aislamiento real entre cuentas (RLS)', 'Necesita dos cuentas de prueba en el Supabase real. Desde aquí no tengo permiso para conectarme a su proyecto.',
             'Ejecutar tests/integracion-supabase.html con dos cuentas de prueba')
