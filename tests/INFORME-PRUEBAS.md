@@ -2,11 +2,11 @@
 
 Fecha: 23/10/2026 · Navegador: Chromium (Playwright) · Supabase **simulado** (`tests/e2e/mock_supabase.py`)
 
-**Resumen:** 41 aprobadas · 0 fallidas · 2 bloqueadas · 43 en total.
+**Resumen:** pruebas de navegador: 41 aprobadas, 0 fallidas · pruebas contra el Supabase real (23/10/2026): 21 aprobadas, 0 fallidas. Sin pruebas bloqueadas.
 
 > Las pruebas automáticas prueban el código del navegador (sesión, licencia, guardado, trabajo sin conexión, fotos, PDF,
 > restablecimiento y fallos de red). **No** prueban las políticas reales de la base: para eso está
-> `tests/integracion-supabase.html`, que se ejecuta con cuentas de prueba (E6 y E7 siguen bloqueadas hasta entonces).
+> `tests/integracion-supabase.html`, ejecutado el 23/10/2026 con dos cuentas y una licencia de prueba (ver abajo).
 
 ## Errores encontrados y corregidos
 
@@ -38,10 +38,9 @@ Fecha: 23/10/2026 · Navegador: Chromium (Playwright) · Supabase **simulado** (
 
 ## Pendiente (requiere acción del administrador)
 
-1. Ejecutar `tests/integracion-supabase.html` con dos cuentas y una licencia de prueba (E6, E7).
-2. Revisar y aplicar `supabase/propuestas/PROPUESTA_licencia_en_rls.sql`: hoy la base no exige licencia (solo la pantalla) y un
+1. Revisar y aplicar `supabase/propuestas/PROPUESTA_licencia_en_rls.sql`: hoy la base no exige licencia (solo la pantalla) y un
    dispositivo revocado se reactiva solo. **No aplicada.**
-3. Realtime en vivo no se pudo simular (E4 se comprobó con recarga).
+2. Realtime en vivo no se pudo simular (E4 se comprobó con recarga).
 
 ## Resultados
 
@@ -79,8 +78,8 @@ Fecha: 23/10/2026 · Navegador: Chromium (Playwright) · Supabase **simulado** (
 | O6 | Subir lo hecho sin internet | Altas y borrados llegan a la nube | Al volver internet: se subió el atleta nuevo y se aplicó el borrado; cola 0; estado «Conectado a la base de datos centralizada»; tras recargar coincide: True | **Aprobada** |
 | O7 | Límite de días sin conexión | Pide conexión | Con la última validación de licencia de hace 31 días, sin internet no deja entrar (límite: 30 días) | **Aprobada** |
 | O8 | Sin internet ni librería en caché | Abre con la copia del equipo | Sin internet y sin poder cargar la librería: entra con la copia del equipo («Sin conexión: trabajando con la copia de este equipo. Se sin…») | **Aprobada** |
-| E6 | Aislamiento real entre cuentas (RLS) | — | Necesita dos cuentas de prueba en el Supabase real. Desde aquí no tengo permiso para conectarme a su proyecto. | **Bloqueada** |
-| E7 | Permisos de licencias y license_devices | — | Necesita el Supabase real (políticas y función activate_device_license). | **Bloqueada** |
+| E6 | Aislamiento real entre cuentas (RLS) | Sin acceso a datos ajenos | Aprobada en el Supabase real: la cuenta B no ve, no modifica ni borra los registros de A, y no puede usar su licencia (I17–I20). | **Aprobada** |
+| E7 | Permisos de licencias y license_devices | Sin acceso a datos ajenos | Aprobada en el Supabase real: sin sesión y con sesión no se pueden leer licenses ni license_devices; la RPC exige sesión; inserciones ajenas y colecciones no permitidas se rechazan (I01–I05, I13–I15). | **Aprobada** |
 | F1 | Ficha individual con foto | Nombre, foto, valores y % correctos | Ficha_Ana_Ficticia_2026.pdf: 2 página(s), 1 imagen(es). Bloqueo pre 50 cm, fin 55 cm y cambio +10 % presentes: True | **Aprobada** |
 | F2 | Informe del equipo y comparativo por etapas | 1 página resumen + 1 por prueba; promedios y % correctos | 12 páginas (resumen + 11 pruebas), 11 imágenes. Bloqueo: Ana 50→55 (+10 %): True; Bea 40→42 (+5 %): True; promedio 45→48,5 (+7,8 %): True | **Aprobada** |
 | F3 | Informe de atleta sin foto | Se genera sin error | Atleta sin foto: el informe se genera y muestra «Sin foto» (4 páginas) | **Aprobada** |
@@ -90,6 +89,35 @@ Fecha: 23/10/2026 · Navegador: Chromium (Playwright) · Supabase **simulado** (
 | G4 | Borrado confirmado con BORRAR | Se borran solo los datos de la cuenta; sesión y licencia siguen | «Información restablecida. El registro está vacío y listo para comenzar las pruebas.». Registros del usuario: 6→0; los de otra cuenta se conservan (1). Tras recargar no reaparecen; sesión y licencia conservadas: True. | **Aprobada** |
 | D6 | Capturar con la cámara | Vista previa con la foto | Cámara simulada: video visible True; foto capturada True | **Aprobada** |
 | D7 | Permiso de cámara denegado | Mensaje claro | Permiso de cámara negado: «No se encontró una cámara en este equipo. Use «Elegir fotografía».» | **Aprobada** |
+
+## Pruebas contra el Supabase real (23/10/2026)
+
+Ejecutadas por el administrador con `tests/integracion-supabase.html` (cuentas y licencia de prueba). Datos crudos: `tests/resultados-integracion-supabase.json`.
+
+| ID | Prueba | Esperado | Obtenido | Estado |
+|---|---|---|---|---|
+| I01 | Lectura anónima de app_records | 0 filas o error de permisos | 0 filas | **Aprobada** |
+| I02 | Lectura anónima de licenses | 0 filas o error de permisos | Error: permission denied for table licenses | **Aprobada** |
+| I03 | Lectura anónima de license_devices | 0 filas o error de permisos | Error: permission denied for table license_devices | **Aprobada** |
+| I04 | RPC de licencia sin sesión | Rechazo (sin permiso o «Debes iniciar sesión») | Error: permission denied for function activate_device_license | **Aprobada** |
+| I05 | Inserción anónima en app_records | Rechazo por RLS | Rechazada: new row violates row-level security policy for table "app_records" | **Aprobada** |
+| I06 | Inicio de sesión cuenta A | Sesión válida | Usuario d001b107-5d50-4e9a-85a9-c3e02e483f16 | **Aprobada** |
+| I07 | Contraseña incorrecta | Rechazo | Rechazada: Invalid login credentials | **Aprobada** |
+| I08 | Licencia válida en un dispositivo de prueba | ok: true | {"ok":true,"status":"active","expires_at":"2027-01-23T14:19:44.242284+00:00"} | **Aprobada** |
+| I09 | Licencia inválida | ok: false | {"ok":false,"message":"Código de licencia no válido."} | **Aprobada** |
+| I10 | Guardar registro ficticio | Sin error | Guardado | **Aprobada** |
+| I11 | Leer el registro guardado | 1 fila con v=1 | [{"data":{"v":1,"nombre":"Atleta de integración"}}] | **Aprobada** |
+| I12 | Actualizar el registro | v=2 al releer | [{"data":{"v":2,"nombre":"Atleta de integración"}}] | **Aprobada** |
+| I13 | Insertar con el user_id de otra persona | Rechazo por RLS | Rechazada: new row violates row-level security policy for table "app_records" | **Aprobada** |
+| I14 | Leer licenses estando conectada | 0 filas o error (no debe ver códigos) | Error: permission denied for table licenses | **Aprobada** |
+| I15 | Colección no permitida | Rechazo por la restricción check | Rechazada: new row for relation "app_records" violates check constraint "app_records_collection_check" | **Aprobada** |
+| I16 | Inicio de sesión cuenta B | Sesión válida | Usuario 02e24bd8-e22e-4257-9ca2-306a837bd0ae | **Aprobada** |
+| I17 | B intenta leer los registros de A | 0 filas | 0 filas visibles | **Aprobada** |
+| I18 | B intenta modificar el registro de A | A conserva v=2 | Valor en A: {"v":2,"nombre":"Atleta de integración"} | **Aprobada** |
+| I19 | B intenta borrar el registro de A | El registro de A sigue existiendo | Filas de A: 1 | **Aprobada** |
+| I20 | B intenta usar la licencia de A | ok: false («pertenece a otra cuenta») | {"ok":false,"message":"La licencia pertenece a otra cuenta."} | **Aprobada** |
+| I21 | Borrar el registro ficticio | 0 filas al releer | Quedan 0 | **Aprobada** |
+| NOTA | Dispositivo de prueba registrado | — | La prueba I08 registró el dispositivo «dispositivo-prueba-oepppgxm» en license_devices. Si su licencia de prueba permite solo 1 computadora, revóquelo en Supabase (revoked_at) antes de usar otra. | **Omitida** |
 
 ## Cómo repetir
 

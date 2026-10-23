@@ -1,0 +1,200 @@
+[
+ {
+  "id": "I01",
+  "nombre": "Lectura anónima de app_records",
+  "esperado": "0 filas o error de permisos",
+  "obtenido": "0 filas",
+  "estado": "Aprobada",
+  "fecha": "2026-10-23T14:43:13.571Z",
+  "origen": "http://127.0.0.1:8787/tests/integracion-supabase.html"
+ },
+ {
+  "id": "I02",
+  "nombre": "Lectura anónima de licenses",
+  "esperado": "0 filas o error de permisos",
+  "obtenido": "Error: permission denied for table licenses",
+  "estado": "Aprobada",
+  "fecha": "2026-10-23T14:43:13.836Z",
+  "origen": "http://127.0.0.1:8787/tests/integracion-supabase.html"
+ },
+ {
+  "id": "I03",
+  "nombre": "Lectura anónima de license_devices",
+  "esperado": "0 filas o error de permisos",
+  "obtenido": "Error: permission denied for table license_devices",
+  "estado": "Aprobada",
+  "fecha": "2026-10-23T14:43:14.122Z",
+  "origen": "http://127.0.0.1:8787/tests/integracion-supabase.html"
+ },
+ {
+  "id": "I04",
+  "nombre": "RPC de licencia sin sesión",
+  "esperado": "Rechazo (sin permiso o «Debes iniciar sesión»)",
+  "obtenido": "Error: permission denied for function activate_device_license",
+  "estado": "Aprobada",
+  "fecha": "2026-10-23T14:43:14.715Z",
+  "origen": "http://127.0.0.1:8787/tests/integracion-supabase.html"
+ },
+ {
+  "id": "I05",
+  "nombre": "Inserción anónima en app_records",
+  "esperado": "Rechazo por RLS",
+  "obtenido": "Rechazada: new row violates row-level security policy for table \"app_records\"",
+  "estado": "Aprobada",
+  "fecha": "2026-10-23T14:43:15.174Z",
+  "origen": "http://127.0.0.1:8787/tests/integracion-supabase.html"
+ },
+ {
+  "id": "I06",
+  "nombre": "Inicio de sesión cuenta A",
+  "esperado": "Sesión válida",
+  "obtenido": "Usuario d001b107-5d50-4e9a-85a9-c3e02e483f16",
+  "estado": "Aprobada",
+  "fecha": "2026-10-23T14:43:15.559Z",
+  "origen": "http://127.0.0.1:8787/tests/integracion-supabase.html"
+ },
+ {
+  "id": "I07",
+  "nombre": "Contraseña incorrecta",
+  "esperado": "Rechazo",
+  "obtenido": "Rechazada: Invalid login credentials",
+  "estado": "Aprobada",
+  "fecha": "2026-10-23T14:43:15.834Z",
+  "origen": "http://127.0.0.1:8787/tests/integracion-supabase.html"
+ },
+ {
+  "id": "I08",
+  "nombre": "Licencia válida en un dispositivo de prueba",
+  "esperado": "ok: true",
+  "obtenido": "{\"ok\":true,\"status\":\"active\",\"expires_at\":\"2027-01-23T14:19:44.242284+00:00\"}",
+  "estado": "Aprobada",
+  "fecha": "2026-10-23T14:43:16.069Z",
+  "origen": "http://127.0.0.1:8787/tests/integracion-supabase.html"
+ },
+ {
+  "id": "I09",
+  "nombre": "Licencia inválida",
+  "esperado": "ok: false",
+  "obtenido": "{\"ok\":false,\"message\":\"Código de licencia no válido.\"}",
+  "estado": "Aprobada",
+  "fecha": "2026-10-23T14:43:16.248Z",
+  "origen": "http://127.0.0.1:8787/tests/integracion-supabase.html"
+ },
+ {
+  "id": "I10",
+  "nombre": "Guardar registro ficticio",
+  "esperado": "Sin error",
+  "obtenido": "Guardado",
+  "estado": "Aprobada",
+  "fecha": "2026-10-23T14:43:16.467Z",
+  "origen": "http://127.0.0.1:8787/tests/integracion-supabase.html"
+ },
+ {
+  "id": "I11",
+  "nombre": "Leer el registro guardado",
+  "esperado": "1 fila con v=1",
+  "obtenido": "[{\"data\":{\"v\":1,\"nombre\":\"Atleta de integración\"}}]",
+  "estado": "Aprobada",
+  "fecha": "2026-10-23T14:43:16.702Z",
+  "origen": "http://127.0.0.1:8787/tests/integracion-supabase.html"
+ },
+ {
+  "id": "I12",
+  "nombre": "Actualizar el registro",
+  "esperado": "v=2 al releer",
+  "obtenido": "[{\"data\":{\"v\":2,\"nombre\":\"Atleta de integración\"}}]",
+  "estado": "Aprobada",
+  "fecha": "2026-10-23T14:43:17.275Z",
+  "origen": "http://127.0.0.1:8787/tests/integracion-supabase.html"
+ },
+ {
+  "id": "I13",
+  "nombre": "Insertar con el user_id de otra persona",
+  "esperado": "Rechazo por RLS",
+  "obtenido": "Rechazada: new row violates row-level security policy for table \"app_records\"",
+  "estado": "Aprobada",
+  "fecha": "2026-10-23T14:43:17.444Z",
+  "origen": "http://127.0.0.1:8787/tests/integracion-supabase.html"
+ },
+ {
+  "id": "I14",
+  "nombre": "Leer licenses estando conectada",
+  "esperado": "0 filas o error (no debe ver códigos)",
+  "obtenido": "Error: permission denied for table licenses",
+  "estado": "Aprobada",
+  "fecha": "2026-10-23T14:43:17.701Z",
+  "origen": "http://127.0.0.1:8787/tests/integracion-supabase.html"
+ },
+ {
+  "id": "I15",
+  "nombre": "Colección no permitida",
+  "esperado": "Rechazo por la restricción check",
+  "obtenido": "Rechazada: new row for relation \"app_records\" violates check constraint \"app_records_collection_check\"",
+  "estado": "Aprobada",
+  "fecha": "2026-10-23T14:43:17.975Z",
+  "origen": "http://127.0.0.1:8787/tests/integracion-supabase.html"
+ },
+ {
+  "id": "I16",
+  "nombre": "Inicio de sesión cuenta B",
+  "esperado": "Sesión válida",
+  "obtenido": "Usuario 02e24bd8-e22e-4257-9ca2-306a837bd0ae",
+  "estado": "Aprobada",
+  "fecha": "2026-10-23T14:43:18.269Z",
+  "origen": "http://127.0.0.1:8787/tests/integracion-supabase.html"
+ },
+ {
+  "id": "I17",
+  "nombre": "B intenta leer los registros de A",
+  "esperado": "0 filas",
+  "obtenido": "0 filas visibles",
+  "estado": "Aprobada",
+  "fecha": "2026-10-23T14:43:18.908Z",
+  "origen": "http://127.0.0.1:8787/tests/integracion-supabase.html"
+ },
+ {
+  "id": "I18",
+  "nombre": "B intenta modificar el registro de A",
+  "esperado": "A conserva v=2",
+  "obtenido": "Valor en A: {\"v\":2,\"nombre\":\"Atleta de integración\"}",
+  "estado": "Aprobada",
+  "fecha": "2026-10-23T14:43:19.601Z",
+  "origen": "http://127.0.0.1:8787/tests/integracion-supabase.html"
+ },
+ {
+  "id": "I19",
+  "nombre": "B intenta borrar el registro de A",
+  "esperado": "El registro de A sigue existiendo",
+  "obtenido": "Filas de A: 1",
+  "estado": "Aprobada",
+  "fecha": "2026-10-23T14:43:20.261Z",
+  "origen": "http://127.0.0.1:8787/tests/integracion-supabase.html"
+ },
+ {
+  "id": "I20",
+  "nombre": "B intenta usar la licencia de A",
+  "esperado": "ok: false («pertenece a otra cuenta»)",
+  "obtenido": "{\"ok\":false,\"message\":\"La licencia pertenece a otra cuenta.\"}",
+  "estado": "Aprobada",
+  "fecha": "2026-10-23T14:43:20.452Z",
+  "origen": "http://127.0.0.1:8787/tests/integracion-supabase.html"
+ },
+ {
+  "id": "I21",
+  "nombre": "Borrar el registro ficticio",
+  "esperado": "0 filas al releer",
+  "obtenido": "Quedan 0",
+  "estado": "Aprobada",
+  "fecha": "2026-10-23T14:43:21.313Z",
+  "origen": "http://127.0.0.1:8787/tests/integracion-supabase.html"
+ },
+ {
+  "id": "NOTA",
+  "nombre": "Dispositivo de prueba registrado",
+  "esperado": "—",
+  "obtenido": "La prueba I08 registró el dispositivo «dispositivo-prueba-oepppgxm» en license_devices. Si su licencia de prueba permite solo 1 computadora, revóquelo en Supabase (revoked_at) antes de usar otra.",
+  "estado": "Omitida",
+  "fecha": "2026-10-23T14:43:21.514Z",
+  "origen": "http://127.0.0.1:8787/tests/integracion-supabase.html"
+ }
+]
