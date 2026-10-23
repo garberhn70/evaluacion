@@ -2,7 +2,7 @@
 
 Fecha: 23/10/2026 · Navegador: Chromium (Playwright) · Supabase **simulado** (`tests/e2e/mock_supabase.py`)
 
-**Resumen:** pruebas de navegador: 41 aprobadas, 0 fallidas · pruebas contra el Supabase real (23/10/2026): 21 aprobadas, 0 fallidas. Sin pruebas bloqueadas.
+**Resumen:** pruebas de navegador: 46 aprobadas, 0 fallidas (2 se cubren con el Supabase real) · pruebas contra el Supabase real (23/10/2026): 21 aprobadas, 0 fallidas. Sin pruebas bloqueadas.
 
 > Las pruebas automáticas prueban el código del navegador (sesión, licencia, guardado, trabajo sin conexión, fotos, PDF,
 > restablecimiento y fallos de red). **No** prueban las políticas reales de la base: para eso está
@@ -30,6 +30,19 @@ Fecha: 23/10/2026 · Navegador: Chromium (Playwright) · Supabase **simulado** (
 - Sin conexión no se permite «Restablecer toda la información».
 - «Cerrar sesión» avisa si hay cambios sin subir.
 - La primera vez en un equipo sí se necesita internet.
+
+## Normas por edad y sexo (nuevo, aprobado por la entrenadora el 23/10/2026)
+
+- La app elige la norma según la **edad del atleta el día de la evaluación** y su rama. Cada nivel muestra su fuente.
+- **Salto horizontal:** FitBack 2023 (Tomkinson et al., BJSM), 12 a 18 años; 18 en adelante usa la fila de 18 (estimado).
+- **Salto vertical CMJ con manos en la cintura (prueba nueva, 3 intentos):** Polakovičová et al. 2018, voleibol juvenil de élite, 13 a 19 años.
+- **Sprint de 10 m, rama femenina:** Oliveira et al. 2025, clubes de Portugal (11–15 años y 16 en adelante). Rama masculina: referencia interna.
+- **T-test, 16 años en adelante:** tabla para deportistas adultos de equipo; el corte de Bajo es estimado (+1 s). Menores de 16: referencia interna.
+- **IMC de 5 a 18 años:** puntaje z de la OMS 2007 (coeficientes LMS oficiales). Verificado aparte: 14 años 6 meses, IMC 20,76 → z +0,28.
+- Cortes: Bajo = P25, Medio = P50, Bueno = P75, Excelente = P95.
+- **Referencia interna** (sin norma internacional): bloqueo, ataque, 5 m, sentadilla, balón medicinal, plancha, Yo-Yo y burpees. Plancha y burpees se conservan.
+- Cada norma se puede desactivar en «Referencias de nivel físico»; entonces se usa la referencia interna editable. La elección se guarda en la cuenta.
+- Las evaluaciones guardadas no cambian; solo se recalcula el nivel mostrado.
 
 ## Decisiones tomadas (se pueden cambiar)
 
@@ -89,6 +102,11 @@ Fecha: 23/10/2026 · Navegador: Chromium (Playwright) · Supabase **simulado** (
 | G4 | Borrado confirmado con BORRAR | Se borran solo los datos de la cuenta; sesión y licencia siguen | «Información restablecida. El registro está vacío y listo para comenzar las pruebas.». Registros del usuario: 6→0; los de otra cuenta se conservan (1). Tras recargar no reaparecen; sesión y licencia conservadas: True. | **Aprobada** |
 | D6 | Capturar con la cámara | Vista previa con la foto | Cámara simulada: video visible True; foto capturada True | **Aprobada** |
 | D7 | Permiso de cámara denegado | Mensaje claro | Permiso de cámara negado: «No se encontró una cámara en este equipo. Use «Elegir fotografía».» | **Aprobada** |
+| N1 | Prueba nueva: salto vertical CMJ | Aparece el CMJ con 3 intentos | La ficha tiene el Salto vertical CMJ con 3 intentos y sin errores de página | **Aprobada** |
+| N2 | Nivel con norma por edad (18 años) | Niveles de la norma de 18 años con la fuente | 18 años, rama femenina: horizontal 190 = Bueno (FitBack), CMJ 33 = Medio, 10 m 1,95 = Medio, T-test 11,0 = Bueno, cada uno con su fuente | **Aprobada** |
+| N3 | Norma según la edad (14 años) e IMC OMS | Tabla de 14 años; T-test con referencia interna; z de IMC +0,3 | 14 años: horizontal = Bueno (tabla de 14), 10 m = Bueno (Sub-13 a Sub-16), T-test sin norma usa la referencia interna (Medio); IMC 20,8 → z +0,3 normal (OMS) | **Aprobada** |
+| N4 | Desactivar una norma | Vuelve a la referencia interna y se recuerda | Las 4 normas se ven con su fuente; al desmarcar la de salto horizontal se usa la referencia interna (190 = Medio), se guarda en la cuenta y sigue así al recargar | **Aprobada** |
+| N5 | IMC de adulto | Categoría de adulto | Adulta de 28 años: IMC con categorías de adulto (Normal), sin puntaje OMS; sin errores de página | **Aprobada** |
 
 ## Pruebas contra el Supabase real (23/10/2026)
 
