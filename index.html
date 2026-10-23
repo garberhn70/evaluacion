@@ -621,7 +621,7 @@ button,select,input,summary{touch-action:manipulation;-webkit-tap-highlight-colo
                 <button class="btn sm" type="button" id="athleteCameraCancel">Cancelar</button>
               </div>
             </div>
-            <input id="athletePhotoUpload" type="file" accept="image/*" capture="user" hidden>
+            <input id="athletePhotoUpload" type="file" accept="image/*" hidden>
             <p class="hint">Puede tomarla con la cámara en ese momento o elegir una imagen. La fotografía se guarda en la ficha del atleta.</p>
             <p class="toast" id="athletePhotoNote"></p>
           </div>
@@ -1809,7 +1809,8 @@ async function initStore(){
     S.mode='local'; loadLocal(); checkStorageRisk(); $('storeNote').textContent='Inicie sesión para abrir el registro centralizado'; scheduleRender(); window.vbShowGate(true); return;
   }
   window.vbUser=session.user;
-  const lic=local.get('vb-license-code','');
+  // El código se guarda como texto simple (no JSON) en el inicio de sesión
+  const lic=(()=>{try{return localStorage.getItem('vb-license-code')||''}catch(e){return ''}})();
   if(!lic){S.mode='local';loadLocal();checkStorageRisk();$('storeNote').textContent='Falta validar la licencia';scheduleRender();window.vbShowGate(true,'Introduzca su código de licencia.');return;}
   const {data:licResult,error:licError}=await window.vbSupabase.rpc('activate_device_license',{p_license_code:lic,p_device_id:window.vbDeviceId(),p_device_type:window.vbDeviceType()});
   if(licError||!licResult||licResult.ok!==true){
@@ -1938,7 +1939,7 @@ function writeForm(ev,yoyo){
   if(ev&&ev.fecha) set('e-fecha',ev.fecha);
 }
 let loadedKey=null;
-let athletePhotoData='';
+let athletePhotoData='',photoForAid=null;
 let athleteCameraStream=null;
 function showAthletePhoto(data){
   athletePhotoData=data||'';
@@ -1970,7 +1971,7 @@ $('athleteCameraStart').onclick=async()=>{
     athleteCameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});
     $('athleteCameraVideo').srcObject=athleteCameraStream;$('athleteCameraBox').hidden=false;
     $('athletePhotoNote').textContent='Encuadre el rostro y pulse Capturar foto.';
-  }catch(err){stopAthleteCamera();$('athletePhotoNote').textContent=err.message||'No se pudo abrir la cámara. Revise los permisos del navegador.'}
+  }catch(err){stopAthleteCamera();const n=err&&err.name;$('athletePhotoNote').textContent=n==='NotAllowedError'||n==='SecurityError'?'El permiso de la cámara está bloqueado. Actívelo en la configuración del navegador o use «Elegir fotografía».':n==='NotFoundError'||n==='OverconstrainedError'?'No se encontró una cámara en este equipo. Use «Elegir fotografía».':n==='NotReadableError'?'La cámara está en uso por otra aplicación. Ciérrela e intente de nuevo.':(err&&err.message)||'No se pudo abrir la cámara. Revise los permisos del navegador.'}
 };
 $('athleteCameraCapture').onclick=async()=>{
   try{
@@ -2007,8 +2008,7 @@ function loadEvalForm(force){
   loadedKey=key;
   $('e-newWrap').hidden=aid!=='__new';
   stopAthleteCamera();
-  const photoAthlete=aid!=='__new'?S.atletas.get(aid)||{}:{};
-  showAthletePhoto(photoAthlete.foto||'');
+  if(aid!==photoForAid){photoForAid=aid;const photoAthlete=aid!=='__new'?S.atletas.get(aid)||{}:{};showAthletePhoto(photoAthlete.foto||'')}
   if(aid!=='__new'){const a=S.atletas.get(aid)||{};$('e-sexo').value=a.sexo||'F';$('e-pos').value=a.posicion||'';$('e-nac').value=a.nac||'';$('e-cat').value=a.categoria||''}
   const id=aid!=='__new'?evalId(aid,temp,mom):null, ev=id?S.evaluaciones.get(id):null;
   if(ev){writeForm(ev,yoyoFor(id,ev));$('evState').textContent='Continuando la evaluación del '+fdate(ev.fecha);$('e-del').hidden=false}
@@ -2081,7 +2081,7 @@ $('evf').onsubmit=async e=>{
     else if(S.pruebas.has(pid)) await del('pruebas',pid);
     toast('e-toast',`Guardado: ${atl.nombre}, ${MOM_LONG[ev.momento].toLowerCase()} ${ev.temporada}.`);
     if(storageRisk&&S.mode==='local') showBackupText(backupData(),'Evaluación guardada. Copie ahora el respaldo y péguelo en Notas: si la página se recarga, los datos de esta página pueden borrarse.');
-    fillEvalAthletes();$('e-atleta').value=aid;loadedKey=null;loadEvalForm(true);
+    fillEvalAthletes();$('e-atleta').value=aid;loadedKey=null;photoForAid=null;loadEvalForm(true);
   }catch(err){toast('e-toast','No se pudo guardar. Revise la conexión e intente de nuevo.',true)}
   $('e-save').disabled=false;
 };
@@ -3388,7 +3388,8 @@ function teamPDF(){
     const avgPre=mean('pre'),avgMid=mean('mid'),avgFin=mean('fin');
     const avgChange=avgPre!==null&&avgFin!==null?changePct(T,avgFin,avgPre):null;
     const bodyT=rowsT.map(x=>['',pdfSafe(x.r.a.nombre),x.pre==null?'—':fmtTest(T,x.pre),x.mid==null?'—':fmtTest(T,x.mid),x.fin==null?'—':fmtTest(T,x.fin),x.change?((x.change.pct>0?'+':'')+x.change.pct.toFixed(1)+'%'):'—']);
-    bodyT.push(['',{content:'Promedio del equipo',styles:{fontStyle:'bold'}},avgPre===null?'—':fmtTest(T,avgPre),avgMid===null?'—':fmtTest(T,avgMid),avgFin===null?'—':fmtTest(T,avgFin),avgChange?((avgChange.pct>0?'+':'')+avgChange.pct.toFixed(1)+'%'):'—']);
+    const fmtAvg=v=>v===null?'—':fmtN(v,(T.dec??0)+1)+' '+T.unidad;
+    bodyT.push(['',{content:'Promedio del equipo',styles:{fontStyle:'bold'}},fmtAvg(avgPre),fmtAvg(avgMid),fmtAvg(avgFin),avgChange?((avgChange.pct>0?'+':'')+avgChange.pct.toFixed(1)+'%'):'—']);
     doc.autoTable({startY:y,head:[['Foto','Atleta','Pretemporada','Mitad de temporada','Fin de temporada','Cambio pre-fin']],body:bodyT,theme:'grid',
       headStyles:{fillColor:COL.ink,textColor:255,fontSize:9,halign:'center',valign:'middle'},
       styles:{fontSize:9,cellPadding:2,lineColor:COL.line,lineWidth:0.2,textColor:COL.ink,halign:'center',valign:'middle'},
@@ -3654,7 +3655,8 @@ if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostn
   window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})});
 }
 </script>
-<script id="vb-cloud-controller">(function(){const $=id=>document.getElementById(id),K='vb-supabase-config';window.vbLoadConfig=()=>{try{return JSON.parse(localStorage.getItem(K)||'{}')}catch(e){return {}}};window.vbDeviceId=()=>{let id=localStorage.getItem('vb-device-id');if(!id){id=crypto.randomUUID?crypto.randomUUID():'dev-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem('vb-device-id',id)}return id};window.vbDeviceType=()=> $('cloudDeviceType').value;window.vbShowGate=(show,msg)=>{$('cloudAuthGate').hidden=!show;$('cloudAuthTop').hidden=show;if(msg){$('cloudAuthMessage').textContent=msg;$('cloudAuthMessage').className=''}const c=window.vbLoadConfig();$('cloudProjectUrl').value=$('cloudProjectUrl').value||c.url||'';$('cloudAnonKey').value=$('cloudAnonKey').value||c.key||'';$('cloudEmail').value=$('cloudEmail').value||localStorage.getItem('vb-last-email')||''};const say=(s,ok=false)=>{$('cloudAuthMessage').textContent=s;$('cloudAuthMessage').className=ok?'ok':''};const config=()=>{const url=$('cloudProjectUrl').value.trim().replace(/\/+$/,''),key=$('cloudAnonKey').value.trim();if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url)||!key){say('Introduzca la URL válida del proyecto y la clave pública.');return false}localStorage.setItem(K,JSON.stringify({url,key}));say('Configuración guardada. Se conectará al iniciar sesión.',true);return true};$('cloudSaveConfig').onclick=config;$('cloudSignIn').onclick=async()=>{try{if(!window.supabase?.createClient){say('No se pudo cargar Supabase JS. Compruebe Internet.');return}if(!window.vbLoadConfig().url&&!config())return;const c=window.vbLoadConfig(),client=window.supabase.createClient(c.url,c.key),email=$('cloudEmail').value.trim(),password=$('cloudPassword').value,license=$('cloudLicense').value.trim();if(!email||!password||!license){say('Complete correo, contraseña y código de licencia.');return}$('cloudSignIn').disabled=true;say('Verificando cuenta…');const {error}=await client.auth.signInWithPassword({email,password});if(error)throw error;localStorage.setItem('vb-last-email',email);localStorage.setItem('vb-license-code',license);location.reload()}catch(e){say(e.message||'No se pudo iniciar sesión')}finally{$('cloudSignIn').disabled=false}};$('cloudSignUp').onclick=async()=>{try{if(!window.supabase?.createClient){say('No se pudo cargar Supabase JS.');return}if(!window.vbLoadConfig().url&&!config())return;const c=window.vbLoadConfig(),client=window.supabase.createClient(c.url,c.key),email=$('cloudEmail').value.trim(),password=$('cloudPassword').value;if(!email||password.length<8){say('Indique correo válido y contraseña de al menos 8 caracteres.');return}const {error}=await client.auth.signUp({email,password});if(error)throw error;say('Cuenta solicitada. Revise el correo si la confirmación está activada y luego inicie sesión.',true)}catch(e){say(e.message||'No se pudo crear la cuenta')}};$('cloudReset').onclick=async()=>{try{const c=window.vbLoadConfig(),email=$('cloudEmail').value.trim();if(!c.url||!c.key){say('Guarde primero la configuración de Supabase.');return}if(!email){say('Escriba su correo electrónico.');return}const client=window.supabase.createClient(c.url,c.key),{error}=await client.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});if(error)throw error;say('Si el correo está registrado, recibirá instrucciones.',true)}catch(e){say(e.message||'No se pudo recuperar la contraseña')}};$('cloudSignOut').onclick=async()=>{try{if(window.vbSupabase)await window.vbSupabase.auth.signOut()}finally{localStorage.removeItem('vb-license-code');location.reload()}};const saved=window.vbLoadConfig();const defaults={url:'https://hpowcgmaqqbmijnuktpj.supabase.co',key:'sb_publishable_usgMJpyqzpMd9mb1kH5uMg_X8IUnP4K'};const c={url:saved.url||defaults.url,key:saved.key||defaults.key};localStorage.setItem(K,JSON.stringify(c));$('cloudProjectUrl').value=c.url;$('cloudAnonKey').value=c.key;const e=localStorage.getItem('vb-last-email');if(e)$('cloudEmail').value=e})();</script>
+<script id="vb-cloud-controller">(function(){const $=id=>document.getElementById(id),K='vb-supabase-config';window.vbLoadConfig=()=>{try{return JSON.parse(localStorage.getItem(K)||'{}')}catch(e){return {}}};window.vbDeviceId=()=>{let id=localStorage.getItem('vb-device-id');if(!id){id=crypto.randomUUID?crypto.randomUUID():'dev-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem('vb-device-id',id)}return id};window.vbDeviceType=()=>localStorage.getItem('vb-device-type')||$('cloudDeviceType').value;window.vbShowGate=(show,msg)=>{$('cloudAuthGate').hidden=!show;$('cloudAuthTop').hidden=show;if(msg){$('cloudAuthMessage').textContent=msg;$('cloudAuthMessage').className=''}const c=window.vbLoadConfig();$('cloudProjectUrl').value=$('cloudProjectUrl').value||c.url||'';$('cloudAnonKey').value=$('cloudAnonKey').value||c.key||'';$('cloudEmail').value=$('cloudEmail').value||localStorage.getItem('vb-last-email')||''};const say=(s,ok=false)=>{$('cloudAuthMessage').textContent=s;$('cloudAuthMessage').className=ok?'ok':''};const config=()=>{const url=$('cloudProjectUrl').value.trim().replace(/\/+$/,''),key=$('cloudAnonKey').value.trim();if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url)||!key){say('Introduzca la URL válida del proyecto y la clave pública.');return false}localStorage.setItem(K,JSON.stringify({url,key}));say('Configuración guardada. Se conectará al iniciar sesión.',true);return true};$('cloudSaveConfig').onclick=config;$('cloudSignIn').onclick=async()=>{try{if(!window.supabase?.createClient){say('No se pudo cargar Supabase JS. Compruebe Internet.');return}if(!window.vbLoadConfig().url&&!config())return;const c=window.vbLoadConfig(),client=window.supabase.createClient(c.url,c.key),email=$('cloudEmail').value.trim(),password=$('cloudPassword').value,license=$('cloudLicense').value.trim();if(!email||!password||!license){say('Complete correo, contraseña y código de licencia.');return}$('cloudSignIn').disabled=true;say('Verificando cuenta…');const {error}=await client.auth.signInWithPassword({email,password});if(error)throw error;localStorage.setItem('vb-last-email',email);localStorage.setItem('vb-license-code',license);localStorage.setItem('vb-device-type',$('cloudDeviceType').value);location.reload()}catch(e){say(e.message||'No se pudo iniciar sesión')}finally{$('cloudSignIn').disabled=false}};$('cloudSignUp').onclick=async()=>{try{if(!window.supabase?.createClient){say('No se pudo cargar Supabase JS.');return}if(!window.vbLoadConfig().url&&!config())return;const c=window.vbLoadConfig(),client=window.supabase.createClient(c.url,c.key),email=$('cloudEmail').value.trim(),password=$('cloudPassword').value;if(!email||password.length<8){say('Indique correo válido y contraseña de al menos 8 caracteres.');return}const {error}=await client.auth.signUp({email,password});if(error)throw error;say('Cuenta solicitada. Revise el correo si la confirmación está activada y luego inicie sesión.',true)}catch(e){say(e.message||'No se pudo crear la cuenta')}};$('cloudReset').onclick=async()=>{try{const c=window.vbLoadConfig(),email=$('cloudEmail').value.trim();if(!c.url||!c.key){say('Guarde primero la configuración de Supabase.');return}if(!email){say('Escriba su correo electrónico.');return}const client=window.supabase.createClient(c.url,c.key),{error}=await client.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});if(error)throw error;say('Si el correo está registrado, recibirá instrucciones.',true)}catch(e){say(e.message||'No se pudo recuperar la contraseña')}};$('cloudSignOut').onclick=async()=>{try{if(window.vbSupabase)await window.vbSupabase.auth.signOut()}finally{localStorage.removeItem('vb-license-code');location.reload()}};const saved=window.vbLoadConfig();const defaults={url:'https://hpowcgmaqqbmijnuktpj.supabase.co',key:'sb_publishable_usgMJpyqzpMd9mb1kH5uMg_X8IUnP4K'};const c={url:saved.url||defaults.url,key:saved.key||defaults.key};localStorage.setItem(K,JSON.stringify(c));$('cloudProjectUrl').value=c.url;$('cloudAnonKey').value=c.key;{const dt=localStorage.getItem('vb-device-type')||(/iPad|iPhone|iPod|Android|Mobile/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)?'mobile':'desktop');$('cloudDeviceType').value=dt}
+const e=localStorage.getItem('vb-last-email');if(e)$('cloudEmail').value=e})();</script>
 <script>
 window.vbInitStore().catch(function(err){
   console.error('Error al iniciar el almacenamiento:',err);
